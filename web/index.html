@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/gif" href="/logo.gif" />
+    <title>AI Job Search</title>
+    <script>
+      // Applies the theme class before first paint so there's no flash of the
+      // wrong theme -- useTheme.ts's own class toggle only runs after mount.
+      // Also sets a matching inline fallback background on <html> (the only
+      // element guaranteed to exist this early) for the brief window before
+      // the stylesheet loads -- a static light-only fallback here previously
+      // pinned the page to the light background color even in dark theme,
+      // since an inline style always wins over the bg-base utility class.
+      (function () {
+        var stored = localStorage.getItem("mission-control:theme:v2");
+        var theme = stored === "dark" || stored === "light" ? stored : "light";
+        document.documentElement.classList.add(theme);
+        document.documentElement.style.backgroundColor = theme === "dark" ? "#08090d" : "#f7f6f2";
+      })();
+    </script>
+  </head>
+  <body class="bg-base">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

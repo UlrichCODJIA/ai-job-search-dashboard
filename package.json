@@ -1,0 +1,24 @@
+{
+  "name": "ai-job-search-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UlrichCODJIA/ai-job-search-dashboard.git"
+  },
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"bun run --cwd server dev\" \"bun run --cwd web dev\"",
+    "build": "bun run --cwd web build",
+    "start": "bun run --cwd server start",
+    "typecheck": "bun run --cwd server typecheck && bun run --cwd web typecheck",
+    "test": "bun run --cwd server test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        shell: bash
+
+      - name: Set up a minimal ai-job-search fixture checkout
+        # paths.ts only requires AI_JOB_SEARCH_ROOT to point at a directory
+        # with CLAUDE.md + .claude/ -- no real content, tests don't read from
+        # it. Using runner.temp (rather than a hardcoded /tmp) keeps this a
+        # valid native path on both ubuntu-latest and windows-latest.
+        run: |
+          mkdir -p "${{ runner.temp }}/ai-job-search-fixture/.claude"
+          touch "${{ runner.temp }}/ai-job-search-fixture/CLAUDE.md"
+        shell: bash
+
+      - name: Typecheck
+        run: bun run typecheck
+        shell: bash
+
+      - name: Test
+        run: bun run test
+        shell: bash
+        env:
+          AI_JOB_SEARCH_ROOT: ${{ runner.temp }}/ai-job-search-fixture
+
+      - name: Build
+        run: bun run build
+        shell: bash

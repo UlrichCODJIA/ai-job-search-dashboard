@@ -1,0 +1,103 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Dark theme (default): layered near-blacks, phosphor-cyan signal accent -
+     "mission control" rather than another generic slate-and-blue SaaS shell. */
+  --color-base: 8 9 13;
+  --color-surface: 16 18 24;
+  --color-surface-2: 23 26 34;
+  --color-border: 148 163 184;
+  --color-ink: 244 246 249;
+  --color-muted: 148 163 184;
+  --color-signal: 45 212 234;
+  /* Text drawn on top of a solid bg-signal fill. Dark theme's signal is a
+     bright cyan, so dark navy text reads clearly; light theme's signal is a
+     deeper, more saturated teal, so the same dark text nearly disappears -
+     this token keeps that pairing correct in both themes instead of hardcoding
+     one text color everywhere bg-signal is used. */
+  --color-signal-ink: 4 32 42;
+}
+
+html.light {
+  color-scheme: light;
+  /* Light theme: elevated warm neutrals instead of stark white. */
+  --color-base: 247 246 242;
+  --color-surface: 255 255 255;
+  --color-surface-2: 241 239 234;
+  --color-border: 15 23 42;
+  --color-ink: 24 24 27;
+  --color-muted: 82 82 91;
+  --color-signal: 8 145 178;
+  --color-signal-ink: 255 255 255;
+}
+
+body {
+  @apply text-ink antialiased;
+  /* A real warm, multi-hue atmosphere -- not a flat fill with one faint glow.
+     Every reference in the design-inspiration library (dark or light) has
+     visible color temperature in the background: cyan brand glow top-left,
+     a violet echo top-right, a warm amber wash rising from the bottom. */
+  background-color: rgb(var(--color-base));
+  background-image:
+    radial-gradient(1100px 750px at 8% -10%, rgb(var(--color-signal) / 0.16), transparent 60%),
+    radial-gradient(900px 800px at 95% 5%, rgb(139 92 246 / 0.12), transparent 55%),
+    radial-gradient(1200px 700px at 45% 115%, rgb(245 158 11 / 0.08), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  @apply bg-signal/25;
+}
+
+/* Subtle radial glow used behind the sidebar wordmark and hero surfaces -
+   evokes a console readout without being a literal scanline gimmick. */
+.signal-glow {
+  background: radial-gradient(
+    120% 100% at 0% 0%,
+    rgb(var(--color-signal) / 0.16) 0%,
+    transparent 60%
+  );
+}
+
+/* Thin, unobtrusive scrollbars for the log viewer / long tables */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--color-border) / 0.4) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-border/30;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.22s ease-out;
+}
+
+@keyframes badge-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.animate-badge-pulse {
+  animation: badge-pulse 1.6s ease-in-out infinite;
+}

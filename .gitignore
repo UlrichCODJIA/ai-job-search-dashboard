@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+web/dist/
+server/dist/
+
+# Local run/session state - may contain uploaded resumes/cover letters and
+# real run transcripts, never meant to be committed
+server/.runs/
+server/.uploads/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env files, if you ever add one
+.env
+.env.local
+
+# Personal drafts
+.drafts/

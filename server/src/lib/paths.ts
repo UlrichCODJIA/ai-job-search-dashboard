@@ -1,0 +1,61 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+
+function looksLikeAiJobSearchCheckout(dir: string): boolean {
+  return existsSync(path.join(dir, "CLAUDE.md")) && existsSync(path.join(dir, ".claude"));
+}
+
+/** Locates the ai-job-search checkout this dashboard should read/write.
+ *
+ * This dashboard is its own separate repo and must never live inside (or be
+ * auto-detected relative to) an ai-job-search checkout -- `AI_JOB_SEARCH_ROOT`
+ * is always required, pointing at that checkout's path. */
+function findRepoRoot(): string {
+  const override = process.env.AI_JOB_SEARCH_ROOT;
+  if (!override) {
+    throw new Error(
+      "AI_JOB_SEARCH_ROOT is not set. Point it at your ai-job-search checkout, " +
+        "e.g. AI_JOB_SEARCH_ROOT=/path/to/ai-job-search bun run dev",
+    );
+  }
+  const resolved = path.resolve(override);
+  if (looksLikeAiJobSearchCheckout(resolved)) return resolved;
+  throw new Error(
+    `AI_JOB_SEARCH_ROOT is set to "${resolved}", but it doesn't look like an ai-job-search ` +
+      `checkout (expected to find CLAUDE.md and .claude/ there).`,
+  );
+}
+
+export const REPO_ROOT = findRepoRoot();
+
+// This dashboard's OWN root (server/, web/, its own package.json) -- always
+// relative to where this file lives, never to REPO_ROOT. This repo and the
+// ai-job-search checkout are always two separate directories.
+const DASHBOARD_ROOT = path.resolve(import.meta.dir, "..", "..", "..");
+
+export const paths = {
+  repoRoot: REPO_ROOT,
+  claudeMd: path.join(REPO_ROOT, "CLAUDE.md"),
+  seenJobs: path.join(REPO_ROOT, "job_scraper", "seen_jobs.json"),
+  tracker: path.join(REPO_ROOT, "job_search_tracker.csv"),
+  applicationsDir: path.join(REPO_ROOT, "documents", "applications"),
+  upskillDir: path.join(REPO_ROOT, "upskill"),
+  salaryData: path.join(REPO_ROOT, "salary_data.json"),
+  salaryLookupScript: path.join(REPO_ROOT, "salary_lookup.py"),
+  cvDir: path.join(REPO_ROOT, "cv"),
+  coverLettersDir: path.join(REPO_ROOT, "cover_letters"),
+  profileSkillsDir: path.join(
+    REPO_ROOT,
+    ".claude",
+    "skills",
+    "job-application-assistant",
+  ),
+  searchQueries: path.join(REPO_ROOT, ".claude", "skills", "job-scraper", "search-queries.md"),
+  claudeSettings: path.join(REPO_ROOT, ".claude", "settings.json"),
+  agentSkillsDir: path.join(REPO_ROOT, ".agents", "skills"),
+  reportsDir: path.join(REPO_ROOT, "reports"),
+  webDist: path.join(DASHBOARD_ROOT, "web", "dist"),
+  runsDir: path.join(DASHBOARD_ROOT, "server", ".runs"),
+  runLogsDir: path.join(DASHBOARD_ROOT, "server", ".runs", "logs"),
+  uploadsDir: path.join(DASHBOARD_ROOT, "server", ".uploads"),
+} as const;
