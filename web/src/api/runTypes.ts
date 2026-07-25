@@ -36,6 +36,7 @@ export type RunEvent =
   | { type: "run_result"; status: "success" | "error"; result?: string; costUsd?: number; durationMs?: number }
   | { type: "run_error"; message: string }
   | { type: "run_stopped" }
+  | { type: "permission_channel_broken" }
   | { type: "sdk_event"; subtype: string; raw: unknown };
 
 // Mirrors dashboard/server/src/routes/runs.ts's KNOWN_COMMANDS -- kept in sync

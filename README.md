@@ -3,13 +3,17 @@
 [![CI](https://github.com/UlrichCODJIA/ai-job-search-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/UlrichCODJIA/ai-job-search-dashboard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A local web dashboard and launcher for [**ai-job-search**](https://github.com/MadsLorentzen/ai-job-search), an open-source, Claude-powered job application framework. This isn't a fork or a reimplementation of it: it's a companion app that reads the same files the framework's own slash commands already produce (`seen_jobs.json`, `job_search_tracker.csv`, `upskill/` reports, `salary_data.json`, your profile skill files) and renders them as a proper UI, and it can launch those same commands directly and stream their output live instead of you running them one at a time in a terminal.
+A local, open-source job application tracker and dashboard for [**ai-job-search**](https://github.com/MadsLorentzen/ai-job-search), a Claude Code-powered job application framework. This isn't a fork or a reimplementation of it: it's a companion app (Bun API server + React/TypeScript client) that reads the same files the framework's own slash commands already produce (`seen_jobs.json`, `job_search_tracker.csv`, `upskill/` reports, `salary_data.json`, your profile skill files) and renders them as a proper UI, and it can launch those same commands directly and stream their output live instead of you running them one at a time in a terminal.
 
 > **Status**: built while using `ai-job-search` for my own daily job search. Nothing here replaces the framework's workflow files (`.claude/commands/`), this is a viewer and launcher for them.
 
 | Overview                                        | Discovery                                         | Runs                                    |
 | ----------------------------------------------- | ------------------------------------------------- | --------------------------------------- |
 | ![Overview page](docs/screenshots/overview.png) | ![Discovery page](docs/screenshots/discovery.png) | ![Runs page](docs/screenshots/runs.png) |
+
+`/reset` pausing mid-run to ask for confirmation, replied to and resumed from the Runs page instead of a terminal (see ["The launcher"](#the-launcher) below for how):
+
+![Replying to a command paused mid-run](docs/screenshots/runs-reply-demo.gif)
 
 ## Why this exists
 

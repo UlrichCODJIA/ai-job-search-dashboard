@@ -37,6 +37,17 @@ function asContentBlocks(content: unknown): ContentBlock[] {
   return Array.isArray(content) ? (content as ContentBlock[]) : [];
 }
 
+// Seen in the wild when a background Task (subagent) tries to use a
+// permission-gated tool after the main turn already emitted its `result`:
+// the SDK's own interactive canUseTool channel doesn't survive that, and
+// every subsequent gated tool call fails identically, with no
+// permission_request ever reaching createPermissionHandler -- our own
+// canUseTool callback is never invoked for these, so there's no hook point
+// to intercept it earlier than this tool_result content check.
+export function isPermissionChannelBrokenError(content: string): boolean {
+  return /stream closed/i.test(content);
+}
+
 // One AbortController per in-flight run, so a stop request can reach the SDK
 // query() that's actually running. Cleared as soon as the run settles either
 // way, so a stale entry can never be stopped twice or leak across runs.
@@ -117,6 +128,9 @@ async function runQuery(
   activeControllers.set(runId, abortController);
   let sessionId: string | undefined;
   let settled = false;
+  // Surfaced once per run as a clear banner instead of the browser seeing the
+  // same cryptic tool_result repeat for every remaining gated tool call.
+  let permissionChannelBrokenNotified = false;
 
   try {
     const stream = query({
@@ -167,12 +181,17 @@ async function runQuery(
       if (message.type === "user") {
         for (const block of asContentBlocks(message.message?.content)) {
           if (block.type === "tool_result") {
+            const content = typeof block.content === "string" ? block.content : JSON.stringify(block.content);
             emit(runId, {
               type: "tool_result",
               toolUseID: block.tool_use_id,
-              content: typeof block.content === "string" ? block.content : JSON.stringify(block.content),
+              content,
               isError: Boolean(block.is_error),
             });
+            if (block.is_error && !permissionChannelBrokenNotified && isPermissionChannelBrokenError(content)) {
+              permissionChannelBrokenNotified = true;
+              emit(runId, { type: "permission_channel_broken" });
+            }
           }
         }
         continue;

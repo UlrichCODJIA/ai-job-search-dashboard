@@ -85,6 +85,14 @@ export function RunLogViewer({ events }: { events: RunEvent[] }) {
                 ■ stopped by user
               </p>
             );
+          case "permission_channel_broken":
+            return (
+              <p key={i} className="rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-red-300">
+                ⚠ This run's tool-approval channel has stopped responding -- every write/edit/fetch from here on
+                will keep failing the same way. Retrying in place won't help; start a fresh continuation instead
+                (reply "continue" once this run settles, or relaunch the command).
+              </p>
+            );
           default:
             return null;
         }
