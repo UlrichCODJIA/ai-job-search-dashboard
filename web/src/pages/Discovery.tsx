@@ -4,16 +4,18 @@ import { useDismissJob, useJobs, useLaunchRun } from "../api/queries";
 import type { ScrapedJob } from "../api/types";
 import { Avatar } from "../components/Avatar";
 import { Donut } from "../components/charts/Donut";
+import { Legend } from "../components/charts/Legend";
 import { type Column, DataTable } from "../components/DataTable";
 import { Drawer } from "../components/Drawer";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
+import { SectionHeading } from "../components/layout/SectionHeading";
 import { FIT_COLORS, FitPill, NeutralPill } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
 import { resolveFitBucket } from "../lib/fit";
 import { companySlug } from "../lib/slug";
-import { inputClass } from "../lib/ui";
+import { inputClass, primaryButtonClass } from "../lib/ui";
 
 const STATUS_OPTIONS = ["all", "new", "ranked", "evaluated", "skipped", "expired"];
 const FIT_OPTIONS = ["all", "high", "medium", "low"];
@@ -149,11 +151,7 @@ export default function Discovery() {
             subtitle={`${jobs.length} postings seen by /scrape and /rank.`}
             action={
               newCount > 0 && (
-                <button
-                  onClick={handleRankAll}
-                  disabled={launchRun.isPending}
-                  className="rounded-full bg-signal px-3.5 py-1.5 text-sm font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-                >
+                <button onClick={handleRankAll} disabled={launchRun.isPending} className={primaryButtonClass}>
                   Rank {newCount} new job{newCount === 1 ? "" : "s"}
                 </button>
               )
@@ -167,41 +165,46 @@ export default function Discovery() {
             />
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <section className="col-span-2 flex flex-col rounded-3xl border border-border/10 bg-surface p-4 shadow-sm lg:col-span-1">
-                  <h2 className="mb-3 text-sm font-bold tracking-tight text-ink">Fit distribution</h2>
-                  <div className="flex flex-1 items-center gap-4">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <section className="flex flex-col rounded-3xl border border-border/10 bg-surface p-4 shadow-sm lg:col-span-2">
+                  <SectionHeading>Fit distribution</SectionHeading>
+                  <div className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
                     <Donut
-                      size={104}
-                      thickness={18}
+                      size={140}
+                      thickness={22}
                       segments={[
                         { label: "High", value: fitCounts.high, color: FIT_COLORS.high },
                         { label: "Medium", value: fitCounts.medium, color: FIT_COLORS.medium },
                         { label: "Low", value: fitCounts.low, color: FIT_COLORS.low },
                       ]}
                     />
-                    <ul className="flex flex-1 flex-col gap-1.5 text-xs">
-                      <li className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: FIT_COLORS.high }} />
-                        <span className="text-muted">High</span>
-                        <span className="ml-auto font-bold text-ink">{fitCounts.high}</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: FIT_COLORS.medium }} />
-                        <span className="text-muted">Medium</span>
-                        <span className="ml-auto font-bold text-ink">{fitCounts.medium}</span>
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: FIT_COLORS.low }} />
-                        <span className="text-muted">Low</span>
-                        <span className="ml-auto font-bold text-ink">{fitCounts.low}</span>
-                      </li>
-                    </ul>
+                    <Legend
+                      layout="chips"
+                      items={[
+                        { label: "High", value: fitCounts.high, color: FIT_COLORS.high },
+                        { label: "Medium", value: fitCounts.medium, color: FIT_COLORS.medium },
+                        { label: "Low", value: fitCounts.low, color: FIT_COLORS.low },
+                      ]}
+                    />
                   </div>
                 </section>
-                <StatCard label="Total postings" value={jobs.length} accent={FIT_COLORS.medium} />
-                <StatCard label="High fit" value={fitCounts.high} hint="strong matches" accent={FIT_COLORS.high} />
-                <StatCard label="Awaiting rank" value={newCount} hint="new since last /rank" accent="#f59e0b" />
+                <div className="flex flex-col gap-3">
+                  <StatCard label="Total postings" value={jobs.length} accent="#0891b2" align="center" />
+                  <StatCard
+                    label="High fit"
+                    value={fitCounts.high}
+                    hint="strong matches"
+                    accent={FIT_COLORS.high}
+                    align="center"
+                  />
+                  <StatCard
+                    label="Awaiting rank"
+                    value={newCount}
+                    hint="new since last /rank"
+                    accent="#f59e0b"
+                    align="center"
+                  />
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

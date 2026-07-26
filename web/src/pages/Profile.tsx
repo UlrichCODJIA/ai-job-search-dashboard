@@ -13,6 +13,7 @@ import {
 } from "../api/queries";
 import type { MarkdownSection } from "../api/types";
 import { PageHeader } from "../components/layout/PageHeader";
+import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
 import { QueryState } from "../components/QueryState";
 import { useConfirm } from "../hooks/useConfirm";
@@ -23,13 +24,31 @@ const textareaClass =
 const selectClass =
   "mt-2 w-full rounded-full border border-border/15 bg-surface px-3 py-1.5 text-xs text-ink focus:border-signal/40 focus:outline-none focus:ring-1 focus:ring-signal/30";
 
-// Mirrors documents/README.md's four intake subfolders -- /setup (Path A)
-// reads exactly these when building the profile from source documents.
 const DOCUMENT_FOLDERS = [
-  { key: "cv", label: "CV / resume", hint: "PDF or LaTeX, your most complete CV", accept: ".pdf,.tex" },
-  { key: "linkedin", label: "LinkedIn export", hint: "PDF export of your profile", accept: ".pdf" },
-  { key: "diplomas", label: "Diplomas", hint: "Degree certificates, transcripts", accept: ".pdf" },
-  { key: "references", label: "Reference letters", hint: "PDF, text, or markdown", accept: ".pdf,.txt,.md" },
+  {
+    key: "cv",
+    label: "CV / resume",
+    hint: "PDF or LaTeX, your most complete CV",
+    accept: ".pdf,.tex",
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn export",
+    hint: "PDF export of your profile",
+    accept: ".pdf",
+  },
+  {
+    key: "diplomas",
+    label: "Diplomas",
+    hint: "Degree certificates, transcripts",
+    accept: ".pdf",
+  },
+  {
+    key: "references",
+    label: "Reference letters",
+    hint: "PDF, text, or markdown",
+    accept: ".pdf,.txt,.md",
+  },
   {
     key: "postings",
     label: "Job postings",
@@ -38,7 +57,11 @@ const DOCUMENT_FOLDERS = [
   },
 ];
 
-function DocumentUploadCard({ folder }: { folder: (typeof DOCUMENT_FOLDERS)[number] }) {
+function DocumentUploadCard({
+  folder,
+}: {
+  folder: (typeof DOCUMENT_FOLDERS)[number];
+}) {
   const documentsQuery = useDocuments();
   const upload = useUploadDocument();
   const deleteDocument = useDeleteDocument();
@@ -81,9 +104,15 @@ function DocumentUploadCard({ folder }: { folder: (typeof DOCUMENT_FOLDERS)[numb
           ))}
         </ul>
       )}
-      {upload.isError && <p className="mt-1 text-xs text-red-500">{(upload.error as Error).message}</p>}
+      {upload.isError && (
+        <p className="mt-1 text-xs text-red-500">
+          {(upload.error as Error).message}
+        </p>
+      )}
       {deleteDocument.isError && (
-        <p className="mt-1 text-xs text-red-500">{(deleteDocument.error as Error).message}</p>
+        <p className="mt-1 text-xs text-red-500">
+          {(deleteDocument.error as Error).message}
+        </p>
       )}
       <input
         ref={inputRef}
@@ -112,17 +141,21 @@ function ImportDocuments() {
   const navigate = useNavigate();
 
   const runSetup = () => {
-    launchRun.mutate({ command: "/setup" }, { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) });
+    launchRun.mutate(
+      { command: "/setup" },
+      { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
+    );
   };
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold tracking-tight text-ink">Import documents</h2>
+          <InlineSectionHeading>Import documents</InlineSectionHeading>
           <p className="mt-0.5 text-xs text-muted">
-            Drop your CV, LinkedIn export, diplomas, or reference letters here (same as copying them into{" "}
-            <code>documents/</code> by hand), then run <code>/setup</code> to build your profile from them.
+            Drop your CV, LinkedIn export, diplomas, or reference letters here
+            (same as copying them into <code>documents/</code> by hand), then
+            run <code>/setup</code> to build your profile from them.
           </p>
         </div>
         <button
@@ -142,11 +175,6 @@ function ImportDocuments() {
   );
 }
 
-/** Shared shape behind "CV from resume" and "Cover letter template from an
- * example" below: upload a file into some list, pick one from that list, then
- * launch the run that generates something from it. The two cards differ only
- * in which query/mutation hook backs the file list/upload, the accepted file
- * types, and the command they launch -- all supplied by the caller here. */
 function GenerateFromUploadCard({
   title,
   description,
@@ -179,14 +207,20 @@ function GenerateFromUploadCard({
 
   const handleGenerate = () => {
     if (!selected) return;
-    launchRun.mutate(buildLaunchArgs(selected), { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) });
+    launchRun.mutate(buildLaunchArgs(selected), {
+      onSuccess: ({ runId }) => navigate(`/runs/${runId}`),
+    });
   };
 
   return (
     <div className="rounded-2xl border border-border/10 p-3">
       <p className="text-sm font-medium text-ink">{title}</p>
       <p className="mt-0.5 text-xs text-muted">{description}</p>
-      <select value={selected} onChange={(e) => setSelected(e.target.value)} className={selectClass}>
+      <select
+        value={selected}
+        onChange={(e) => setSelected(e.target.value)}
+        className={selectClass}
+      >
         <option value="">{files.length ? chooseLabel : noFilesLabel}</option>
         {files.map((f) => (
           <option key={f} value={f}>
@@ -206,15 +240,29 @@ function GenerateFromUploadCard({
         }}
       />
       <div className="mt-2 flex gap-2">
-        <button onClick={() => inputRef.current?.click()} disabled={uploadPending} className={outlineButtonClass}>
+        <button
+          onClick={() => inputRef.current?.click()}
+          disabled={uploadPending}
+          className={outlineButtonClass}
+        >
           {uploadPending ? "Uploading..." : uploadButtonLabel}
         </button>
-        <button onClick={handleGenerate} disabled={!selected || launchRun.isPending} className={primaryButtonClass}>
+        <button
+          onClick={handleGenerate}
+          disabled={!selected || launchRun.isPending}
+          className={primaryButtonClass}
+        >
           {launchRun.isPending ? "Starting..." : "Generate"}
         </button>
       </div>
-      {uploadError && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
-      {launchRun.isError && <p className="mt-1 text-xs text-red-500">{(launchRun.error as Error).message}</p>}
+      {uploadError && (
+        <p className="mt-1 text-xs text-red-500">{uploadError}</p>
+      )}
+      {launchRun.isError && (
+        <p className="mt-1 text-xs text-red-500">
+          {(launchRun.error as Error).message}
+        </p>
+      )}
     </div>
   );
 }
@@ -229,8 +277,8 @@ function GenerateCvCard() {
       title="CV from resume"
       description={
         <>
-          Regenerates <code>cv/main_example.tex</code> from an uploaded resume, without redoing the rest of
-          your profile.
+          Regenerates <code>cv/main_example.tex</code> from an uploaded resume,
+          without redoing the rest of your profile.
         </>
       }
       files={files}
@@ -241,7 +289,10 @@ function GenerateCvCard() {
       uploadPending={upload.isPending}
       uploadError={upload.isError ? (upload.error as Error).message : null}
       onUpload={(file, onSuccess) =>
-        upload.mutate({ folder: "cv", file }, { onSuccess: (res) => onSuccess(res.filename) })
+        upload.mutate(
+          { folder: "cv", file },
+          { onSuccess: (res) => onSuccess(res.filename) },
+        )
       }
       buildLaunchArgs={(filename) => ({
         command: "/setup",
@@ -263,8 +314,9 @@ function GenerateCoverLetterCard() {
       title="Cover letter template from an example"
       description={
         <>
-          Turns a cover letter you like the structure of (yours or a sample, any format) into a new named
-          template <code>/apply</code> can use, without touching the stock <code>cover_example.tex</code>.
+          Turns a cover letter you like the structure of (yours or a sample, any
+          format) into a new named template <code>/apply</code> can use, without
+          touching the stock <code>cover_example.tex</code>.
         </>
       }
       files={files}
@@ -296,17 +348,21 @@ function ExpandProfile() {
   const navigate = useNavigate();
 
   const runExpand = () => {
-    launchRun.mutate({ command: "/expand" }, { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) });
+    launchRun.mutate(
+      { command: "/expand" },
+      { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
+    );
   };
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold tracking-tight text-ink">Expand profile</h2>
+          <InlineSectionHeading>Expand profile</InlineSectionHeading>
           <p className="mt-0.5 text-xs text-muted">
-            Scans public sources already linked in your profile (GitHub, portfolio, Kaggle, Google Scholar)
-            and named courses/certifications, then adds any competencies it finds, source-tagged, below.
+            Scans public sources already linked in your profile (GitHub,
+            portfolio, Kaggle, Google Scholar) and named courses/certifications,
+            then adds any competencies it finds, source-tagged, below.
           </p>
         </div>
         <button
@@ -324,10 +380,11 @@ function ExpandProfile() {
 function GenerateTemplates() {
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-      <h2 className="text-sm font-bold tracking-tight text-ink">Generate templates</h2>
+      <InlineSectionHeading>Generate templates</InlineSectionHeading>
       <p className="mt-0.5 text-xs text-muted">
-        Not a built-in ai-job-search workflow, added here for convenience: turn a document you upload
-        into a template file, then launch the run that builds it.
+        Not a built-in ai-job-search workflow, added here for convenience: turn
+        a document you upload into a template file, then launch the run that
+        builds it.
       </p>
       <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
         <GenerateCvCard />
@@ -337,11 +394,20 @@ function GenerateTemplates() {
   );
 }
 
-function SectionItem({ section, index, file }: { section: MarkdownSection; index: number; file: string }) {
+function SectionItem({
+  section,
+  index,
+  file,
+}: {
+  section: MarkdownSection;
+  index: number;
+  file: string;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(section.content);
   const updateSection = useUpdateProfileSection();
-  const HeadingTag = `h${Math.min(section.level + 1, 6)}` as keyof JSX.IntrinsicElements;
+  const HeadingTag =
+    `h${Math.min(section.level + 1, 6)}` as keyof JSX.IntrinsicElements;
 
   const startEditing = () => {
     setDraft(section.content);
@@ -386,7 +452,9 @@ function SectionItem({ section, index, file }: { section: MarkdownSection; index
             autoFocus
           />
           {updateSection.isError && (
-            <p className="text-xs text-red-500">{(updateSection.error as Error).message}</p>
+            <p className="text-xs text-red-500">
+              {(updateSection.error as Error).message}
+            </p>
           )}
           <div className="flex gap-2">
             <button
@@ -412,7 +480,13 @@ function SectionItem({ section, index, file }: { section: MarkdownSection; index
   );
 }
 
-function SectionList({ sections, file }: { sections: MarkdownSection[]; file: string }) {
+function SectionList({
+  sections,
+  file,
+}: {
+  sections: MarkdownSection[];
+  file: string;
+}) {
   return (
     <div className="flex flex-col">
       {sections.map((section, i) => (
@@ -439,70 +513,88 @@ export default function Profile() {
               subtitle="What Claude knows about you. Hover any section below and click Edit to change it, no text editor needed."
             />
 
-            <section
-              className={`rounded-3xl border p-4 ${
-                profile.placeholders.length === 0
-                  ? "border-emerald-500/25 bg-emerald-500/[0.06]"
-                  : "border-amber-500/30 bg-amber-500/[0.07]"
-              }`}
-            >
-              {profile.placeholders.length === 0 ? (
-                <p className="text-sm font-medium text-emerald-500">
-                  Profile setup looks complete. No placeholder tokens left in CLAUDE.md or the profile skill
-                  files.
-                </p>
-              ) : (
-                <div>
-                  <p className="text-sm font-medium text-amber-700 dark:text-amber-500">
-                    {profile.placeholders.length} placeholder token{profile.placeholders.length === 1 ? "" : "s"}{" "}
-                    still in your profile. Run <code>/setup</code>, or edit inline below, to fill{" "}
-                    {profile.placeholders.length === 1 ? "it" : "them"} in.
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <section
+                className={`rounded-3xl border p-4 ${
+                  profile.placeholders.length === 0
+                    ? "border-emerald-500/25 bg-emerald-500/[0.06]"
+                    : "border-amber-500/30 bg-amber-500/[0.07]"
+                }`}
+              >
+                {profile.placeholders.length === 0 ? (
+                  <p className="text-sm font-medium text-emerald-500">
+                    Profile setup looks complete. No placeholder tokens left in
+                    CLAUDE.md or the profile skill files.
                   </p>
-                  <ul className="mt-2 flex flex-col gap-0.5 text-xs text-amber-700/80 dark:text-amber-500/80">
-                    {profile.placeholders.slice(0, 8).map((hit, i) => (
-                      <li key={i}>
-                        {hit.file}:{hit.line}: <code>{hit.match}</code>
-                      </li>
-                    ))}
-                    {profile.placeholders.length > 8 && <li>...and {profile.placeholders.length - 8} more.</li>}
-                  </ul>
-                </div>
-              )}
-            </section>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-500">
+                      {profile.placeholders.length} placeholder token
+                      {profile.placeholders.length === 1 ? "" : "s"} still in
+                      your profile. Run <code>/setup</code>, or edit inline
+                      below, to fill{" "}
+                      {profile.placeholders.length === 1 ? "it" : "them"} in.
+                    </p>
+                    <ul className="mt-2 flex flex-col gap-0.5 text-xs text-amber-700/80 dark:text-amber-500/80">
+                      {profile.placeholders.slice(0, 8).map((hit, i) => (
+                        <li key={i}>
+                          {hit.file}:{hit.line}: <code>{hit.match}</code>
+                        </li>
+                      ))}
+                      {profile.placeholders.length > 8 && (
+                        <li>...and {profile.placeholders.length - 8} more.</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </section>
+
+              <ExpandProfile />
+            </div>
 
             <ImportDocuments />
-
-            <ExpandProfile />
 
             <GenerateTemplates />
 
             <section className="rounded-3xl border border-border/10 bg-surface p-5">
-              <SectionList sections={profile.claudeMdSections} file="CLAUDE.md" />
+              <SectionList
+                sections={profile.claudeMdSections}
+                file="CLAUDE.md"
+              />
             </section>
 
             <div className="flex flex-col gap-2">
-              <h2 className="text-sm font-semibold text-ink">Framework files</h2>
+              <InlineSectionHeading>Framework files</InlineSectionHeading>
               {profile.skillFiles.map((file) => {
                 const isOpen = openFiles.has(file.filename);
                 return (
-                  <section key={file.filename} className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
+                  <section
+                    key={file.filename}
+                    className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm"
+                  >
                     <button
                       className="flex w-full items-center justify-between text-left text-sm font-medium text-ink/90"
                       onClick={() =>
                         setOpenFiles((prev) => {
                           const next = new Set(prev);
-                          if (next.has(file.filename)) next.delete(file.filename);
+                          if (next.has(file.filename))
+                            next.delete(file.filename);
                           else next.add(file.filename);
                           return next;
                         })
                       }
                     >
                       {file.filename}
-                      <span className="text-xs text-muted">{isOpen ? "Hide ▲" : "Show ▼"}</span>
+                      <span className="text-xs text-muted">
+                        {isOpen ? "Hide ▲" : "Show ▼"}
+                      </span>
                     </button>
                     {isOpen && (
                       <div className="mt-3 border-t border-border/10 pt-3">
-                        <SectionList sections={file.sections} file={file.filename} />
+                        <SectionList
+                          sections={file.sections}
+                          file={file.filename}
+                        />
                       </div>
                     )}
                   </section>

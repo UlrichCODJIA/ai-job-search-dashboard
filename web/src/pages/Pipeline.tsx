@@ -1,23 +1,39 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useApplications, useLaunchRun, useTracker, useUpdateTrackerRow } from "../api/queries";
+import {
+  useApplications,
+  useLaunchRun,
+  useTracker,
+  useUpdateTrackerRow,
+} from "../api/queries";
 import type { StatusBucket, TrackerRow } from "../api/types";
 import { Avatar } from "../components/Avatar";
 import { HorizontalBarChart } from "../components/charts/BarChart";
 import { Drawer } from "../components/Drawer";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
+import { SectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
 import { NeutralPill, STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
+import { groupCount } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
-import { inputClass, outlineButtonClass, textareaClass } from "../lib/ui";
+import {
+  inputClass,
+  outlineButtonClass,
+  primaryButtonClass,
+  textareaClass,
+} from "../lib/ui";
 
-const BUCKETS: StatusBucket[] = ["Active", "Interview", "Offer", "Hired", "Rejected/Closed"];
+const BUCKETS: StatusBucket[] = [
+  "Active",
+  "Interview",
+  "Offer",
+  "Hired",
+  "Rejected/Closed",
+];
 
-// Mirrors the enum /outcome writes (documents/README.md), plus the tracker's own
-// "applied"/"interview"/"offer" progress values from the /apply -> /outcome lifecycle.
 const STATUS_OPTIONS = [
   "applied",
   "interview",
@@ -29,17 +45,6 @@ const STATUS_OPTIONS = [
   "interview_only",
   "withdrawn",
 ];
-
-function groupCount(rows: TrackerRow[], key: "sector" | "channel") {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    const value = (row[key] ?? "").trim() || "Unspecified";
-    counts.set(value, (counts.get(value) ?? 0) + 1);
-  }
-  return [...counts.entries()]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
-}
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -78,27 +83,25 @@ export default function Pipeline() {
   }, [tracker]);
 
   const sectorCounts = useMemo(() => groupCount(tracker, "sector"), [tracker]);
-  const channelCounts = useMemo(() => groupCount(tracker, "channel"), [tracker]);
+  const channelCounts = useMemo(
+    () => groupCount(tracker, "channel"),
+    [tracker],
+  );
 
-  // Lets the TopBar's global search jump straight to a tracker row's drawer
-  // instead of dumping the user on the board and making them find it again.
   useEffect(() => {
-    const openRowId = (location.state as { openRowId?: string } | null)?.openRowId;
+    const openRowId = (location.state as { openRowId?: string } | null)
+      ?.openRowId;
     if (!openRowId || tracker.length === 0) return;
     const row = tracker.find((r) => r.id === openRowId);
     if (row) setSelected(row);
     navigate(location.pathname, { replace: true, state: null });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key, tracker.length]);
 
-  // Re-sync the edit form only when a *different* row is opened, not on every
-  // background refetch of the same row -- otherwise in-progress edits would vanish.
   useEffect(() => {
     if (selected) {
       setEditStatus(selected.status);
       setEditNotes(selected.notes);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.id]);
 
   const matchedApplication = useMemo(() => {
@@ -106,17 +109,22 @@ export default function Pipeline() {
     const selectedCompany = normalizeCompany(selected.company);
     return (
       applications.find((app) => app.trackerRow?.id === selected.id) ??
-      applications.find((app) => normalizeCompany(app.companySlug).includes(selectedCompany)) ??
+      applications.find((app) =>
+        normalizeCompany(app.companySlug).includes(selectedCompany),
+      ) ??
       null
     );
   }, [applications, selected]);
 
   const statusOptions = useMemo(() => {
-    if (!selected || STATUS_OPTIONS.includes(selected.status)) return STATUS_OPTIONS;
+    if (!selected || STATUS_OPTIONS.includes(selected.status))
+      return STATUS_OPTIONS;
     return [selected.status, ...STATUS_OPTIONS];
   }, [selected]);
 
-  const isDirty = selected != null && (editStatus !== selected.status || editNotes !== selected.notes);
+  const isDirty =
+    selected != null &&
+    (editStatus !== selected.status || editNotes !== selected.notes);
 
   const handleSave = () => {
     if (!selected) return;
@@ -125,7 +133,9 @@ export default function Pipeline() {
       { id: selected.id, patch: { status: editStatus, notes: editNotes } },
       {
         onSuccess: (updated) =>
-          setSelected((current) => (current?.id === savingId ? updated : current)),
+          setSelected((current) =>
+            current?.id === savingId ? updated : current,
+          ),
       },
     );
   };
@@ -133,7 +143,11 @@ export default function Pipeline() {
   const launchOnSelected = (command: "/outcome" | "/interview") => {
     if (!selected) return;
     launchRun.mutate(
-      { command, args: selected.company, resumeKey: companySlug(selected.company) },
+      {
+        command,
+        args: selected.company,
+        resumeKey: companySlug(selected.company),
+      },
       { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
     );
   };
@@ -143,7 +157,10 @@ export default function Pipeline() {
       {() =>
         tracker.length === 0 ? (
           <div className="flex flex-col gap-4">
-            <PageHeader title="Pipeline" subtitle="Your tracked applications, from first submission to outcome." />
+            <PageHeader
+              title="Pipeline"
+              subtitle="Your tracked applications, from first submission to outcome."
+            />
             <EmptyState
               title="No applications tracked yet"
               description="Run /apply on a job posting from Claude Code to start your pipeline. Applications will appear here as a board across five stages."
@@ -151,7 +168,10 @@ export default function Pipeline() {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            <PageHeader title="Pipeline" subtitle={`${tracker.length} application${tracker.length === 1 ? "" : "s"} tracked.`} />
+            <PageHeader
+              title="Pipeline"
+              subtitle={`${tracker.length} application${tracker.length === 1 ? "" : "s"} tracked.`}
+            />
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               {BUCKETS.map((bucket) => {
@@ -163,14 +183,21 @@ export default function Pipeline() {
                   >
                     <div className="flex items-center justify-between px-1">
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-ink">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[bucket] }} />
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: STATUS_COLORS[bucket] }}
+                        />
                         {bucket}
                       </span>
-                      <span className="text-xs font-medium text-muted">{rows.length}</span>
+                      <span className="text-xs font-medium text-muted">
+                        {rows.length}
+                      </span>
                     </div>
                     <div className="thin-scrollbar flex max-h-[480px] flex-col gap-2 overflow-y-auto pr-0.5">
                       {rows.length === 0 ? (
-                        <p className="px-1 py-3 text-center text-xs text-muted/60">No applications here yet</p>
+                        <p className="px-1 py-3 text-center text-xs text-muted/60">
+                          No applications here yet
+                        </p>
                       ) : (
                         rows.map((row) => (
                           <button
@@ -181,11 +208,17 @@ export default function Pipeline() {
                             <div className="flex items-center gap-2">
                               <Avatar name={row.company} />
                               <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-ink">{row.company}</p>
-                                <p className="truncate text-xs text-muted">{row.role}</p>
+                                <p className="truncate font-medium text-ink">
+                                  {row.company}
+                                </p>
+                                <p className="truncate text-xs text-muted">
+                                  {row.role}
+                                </p>
                               </div>
                             </div>
-                            <p className="mt-1.5 text-[11px] text-muted/60">{row.date}</p>
+                            <p className="mt-1.5 text-[11px] text-muted/60">
+                              {row.date}
+                            </p>
                           </button>
                         ))
                       )}
@@ -195,13 +228,13 @@ export default function Pipeline() {
               })}
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-                <h2 className="mb-3 text-sm font-semibold text-ink">By sector</h2>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm lg:col-span-2">
+                <SectionHeading>By sector</SectionHeading>
                 <HorizontalBarChart bars={sectorCounts} />
               </section>
               <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-                <h2 className="mb-3 text-sm font-semibold text-ink">By channel</h2>
+                <SectionHeading>By channel</SectionHeading>
                 <HorizontalBarChart bars={channelCounts} />
               </section>
             </div>
@@ -267,12 +300,16 @@ export default function Pipeline() {
                         <button
                           onClick={handleSave}
                           disabled={!isDirty || updateTrackerRow.isPending}
-                          className="rounded-full bg-signal px-3.5 py-1.5 text-xs font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                          className={primaryButtonClass}
                         >
-                          {updateTrackerRow.isPending ? "Saving..." : "Save changes"}
+                          {updateTrackerRow.isPending
+                            ? "Saving..."
+                            : "Save changes"}
                         </button>
                         {updateTrackerRow.isSuccess && !isDirty && (
-                          <span className="text-xs text-emerald-500">Saved</span>
+                          <span className="text-xs text-emerald-500">
+                            Saved
+                          </span>
                         )}
                         {updateTrackerRow.isError && (
                           <span className="text-xs text-red-500">
@@ -290,16 +327,31 @@ export default function Pipeline() {
                       </h3>
                       <ul className="flex flex-col gap-1.5">
                         {matchedApplication.outcome.stages.map((stage) => (
-                          <li key={stage.label} className="flex items-center gap-2 text-sm">
+                          <li
+                            key={stage.label}
+                            className="flex items-center gap-2 text-sm"
+                          >
                             <span
                               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${
-                                stage.checked ? "bg-emerald-500 text-white" : "bg-surface-2 text-muted"
+                                stage.checked
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-surface-2 text-muted"
                               }`}
                             >
                               {stage.checked ? "✓" : ""}
                             </span>
-                            <span className={stage.checked ? "text-ink" : "text-muted"}>{stage.label}</span>
-                            {stage.date && <span className="text-xs text-muted">({stage.date})</span>}
+                            <span
+                              className={
+                                stage.checked ? "text-ink" : "text-muted"
+                              }
+                            >
+                              {stage.label}
+                            </span>
+                            {stage.date && (
+                              <span className="text-xs text-muted">
+                                ({stage.date})
+                              </span>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -308,7 +360,9 @@ export default function Pipeline() {
                           <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
                             Outcome notes
                           </h3>
-                          <Markdown>{matchedApplication.outcome.notes}</Markdown>
+                          <Markdown>
+                            {matchedApplication.outcome.notes}
+                          </Markdown>
                         </div>
                       )}
                     </div>
@@ -316,17 +370,31 @@ export default function Pipeline() {
 
                   {matchedApplication && (
                     <div className="flex flex-wrap gap-1.5">
-                      {matchedApplication.hasJobPosting && <NeutralPill>job_posting.md</NeutralPill>}
-                      {matchedApplication.hasCvDraft && <NeutralPill>cv_draft.tex</NeutralPill>}
-                      {matchedApplication.hasCoverLetter && <NeutralPill>cover_letter.tex</NeutralPill>}
+                      {matchedApplication.hasJobPosting && (
+                        <NeutralPill>job_posting.md</NeutralPill>
+                      )}
+                      {matchedApplication.hasCvDraft && (
+                        <NeutralPill>cv_draft.tex</NeutralPill>
+                      )}
+                      {matchedApplication.hasCoverLetter && (
+                        <NeutralPill>cover_letter.tex</NeutralPill>
+                      )}
                     </div>
                   )}
 
                   <div className="flex gap-2 border-t border-border/10 pt-4">
-                    <button onClick={() => launchOnSelected("/outcome")} disabled={launchRun.isPending} className={outlineButtonClass}>
+                    <button
+                      onClick={() => launchOnSelected("/outcome")}
+                      disabled={launchRun.isPending}
+                      className={outlineButtonClass}
+                    >
                       Record outcome
                     </button>
-                    <button onClick={() => launchOnSelected("/interview")} disabled={launchRun.isPending} className={outlineButtonClass}>
+                    <button
+                      onClick={() => launchOnSelected("/interview")}
+                      disabled={launchRun.isPending}
+                      className={outlineButtonClass}
+                    >
                       Prep interview
                     </button>
                   </div>

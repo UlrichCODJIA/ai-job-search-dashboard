@@ -44,7 +44,9 @@ function parseSalaryJson<T>(text: string): T {
   try {
     return JSON.parse(text) as T;
   } catch (err) {
-    throw new Error(`invalid JSON in salary_data.json: ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(
+      `invalid JSON in salary_data.json: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
@@ -66,16 +68,18 @@ function resolvePython(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 
-/** Shells to the existing salary_lookup.py --json rather than re-implementing its
- * index/baseline math (tools/README_SALARY_TOOL.md documents that math and it can change). */
 export async function searchSalary(query: string): Promise<unknown> {
   if (!existsSync(paths.salaryData)) {
     throw new Error("salary_data.json not found");
   }
   return new Promise((resolve, reject) => {
-    const child = spawn(resolvePython(), [paths.salaryLookupScript, query, "--json"], {
-      cwd: REPO_ROOT,
-    });
+    const child = spawn(
+      resolvePython(),
+      [paths.salaryLookupScript, query, "--json"],
+      {
+        cwd: REPO_ROOT,
+      },
+    );
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
@@ -83,15 +87,15 @@ export async function searchSalary(query: string): Promise<unknown> {
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        // salary_lookup.py's main() exits 1 with a "No results found" message printed
-        // to stdout (not stderr) for a genuine zero-match search -- that's not a
-        // failure. Only treat it as one when stderr actually has content, or the
-        // exit code is something other than this specific expected case.
         if (code === 1 && !stderr.trim()) {
           resolve([]);
           return;
         }
-        reject(new Error(stderr.trim() || `salary_lookup.py exited with code ${code}`));
+        reject(
+          new Error(
+            stderr.trim() || `salary_lookup.py exited with code ${code}`,
+          ),
+        );
         return;
       }
       try {
@@ -123,9 +127,10 @@ export async function getSalaryData(): Promise<SalaryData> {
   return readSalaryData();
 }
 
-/** Index of the company matching `name` case-insensitively, or -1. Exported
- * standalone (no FS) so the rename/duplicate logic is unit-testable. */
-export function findCompanyIndex(companies: SalaryCompanyEntry[], name: string): number {
+export function findCompanyIndex(
+  companies: SalaryCompanyEntry[],
+  name: string,
+): number {
   const needle = name.trim().toLowerCase();
   return companies.findIndex((c) => c.company.trim().toLowerCase() === needle);
 }
@@ -147,7 +152,6 @@ export function assertValidCompanyEntry(entry: SalaryCompanyEntry): void {
   }
 }
 
-/** Creates a new company, or updates the one matching `originalName` (renames included). */
 export async function upsertSalaryCompany(
   entry: SalaryCompanyEntry,
   originalName?: string,
@@ -155,7 +159,9 @@ export async function upsertSalaryCompany(
   assertValidCompanyEntry(entry);
   return withFileLock(paths.salaryData, async () => {
     const data = await readSalaryData();
-    const targetIndex = originalName ? findCompanyIndex(data.companies, originalName) : -1;
+    const targetIndex = originalName
+      ? findCompanyIndex(data.companies, originalName)
+      : -1;
 
     const collisionIndex = findCompanyIndex(data.companies, entry.company);
     if (collisionIndex >= 0 && collisionIndex !== targetIndex) {
@@ -172,7 +178,9 @@ export async function upsertSalaryCompany(
   });
 }
 
-export async function deleteSalaryCompany(company: string): Promise<SalaryData> {
+export async function deleteSalaryCompany(
+  company: string,
+): Promise<SalaryData> {
   return withFileLock(paths.salaryData, async () => {
     const data = await readSalaryData();
     const index = findCompanyIndex(data.companies, company);
@@ -183,7 +191,9 @@ export async function deleteSalaryCompany(company: string): Promise<SalaryData> 
   });
 }
 
-export async function updateSalaryMetadata(metadata: SalaryMetadata): Promise<SalaryData> {
+export async function updateSalaryMetadata(
+  metadata: SalaryMetadata,
+): Promise<SalaryData> {
   return withFileLock(paths.salaryData, async () => {
     const data = await readSalaryData();
     data.metadata = { ...data.metadata, ...metadata };

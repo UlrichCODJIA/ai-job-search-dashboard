@@ -1,4 +1,6 @@
+import { useEffect, useId, useState } from "react";
 import { arcPath } from "./arc";
+import { lighten } from "../../lib/color";
 
 export interface DonutSegment {
   label: string;
@@ -19,6 +21,7 @@ export function Donut({
   thickness?: number;
   centerLabel?: string;
 }) {
+  const baseId = useId();
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   const cx = size / 2;
   const cy = size / 2;
@@ -27,10 +30,24 @@ export function Donut({
   let cumulativeAngle = 0;
 
   const ariaLabel =
-    total === 0 ? "No data yet" : segments.map((s) => `${s.value} ${s.label}`).join(", ");
+    total === 0
+      ? "No data yet"
+      : segments.map((s) => `${s.value} ${s.label}`).join(", ");
+
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setDrawn(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={ariaLabel}>
+    <svg
+      viewBox={`0 0 ${size} ${size}`}
+      width={size}
+      height={size}
+      role="img"
+      aria-label={ariaLabel}
+    >
       {total === 0 ? (
         <circle
           cx={cx}
@@ -42,25 +59,48 @@ export function Donut({
           strokeWidth={thickness}
         />
       ) : (
-        visible.map((s) => {
-          // Cap just short of a full circle: an exact 360deg arc has coincident
-          // start/end points and SVG draws nothing for it. A small gap between
-          // segments (when there's more than one) reads as a deliberate ring,
-          // not a single flat pie -- matches the rounded-arc style dashboards use.
+        visible.map((s, i) => {
           const gap = visible.length > 1 ? GAP_DEGREES : 0;
           const rawAngle = (s.value / total) * 360;
           const angle = Math.min(Math.max(rawAngle - gap, 0), 359.9);
-          const path = arcPath(cx, cy, r, cumulativeAngle, cumulativeAngle + angle);
+          const path = arcPath(
+            cx,
+            cy,
+            r,
+            cumulativeAngle,
+            cumulativeAngle + angle,
+          );
           cumulativeAngle += rawAngle;
+          const arcLength = (r * angle * Math.PI) / 180;
+          const gradientId = `${baseId}-${i}`;
           return (
-            <path
-              key={s.label}
-              d={path}
-              fill="none"
-              stroke={s.color}
-              strokeWidth={thickness}
-              strokeLinecap="round"
-            />
+            <g key={s.label}>
+              <defs>
+                <linearGradient
+                  id={gradientId}
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor={s.color} />
+                  <stop offset="100%" stopColor={lighten(s.color)} />
+                </linearGradient>
+              </defs>
+              <path
+                d={path}
+                fill="none"
+                stroke={`url(#${gradientId})`}
+                strokeWidth={thickness}
+                strokeLinecap="round"
+                strokeDasharray={arcLength}
+                strokeDashoffset={drawn ? 0 : arcLength}
+                style={{
+                  transition: "stroke-dashoffset 0.6s ease-out",
+                  transitionDelay: `${i * 80}ms`,
+                }}
+              />
+            </g>
           );
         })
       )}

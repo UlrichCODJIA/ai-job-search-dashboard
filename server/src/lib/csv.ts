@@ -4,8 +4,6 @@ import { atomicWriteFile } from "./fs.js";
 
 export type CsvRow = Record<string, string>;
 
-/** Parses raw CSV text into a grid of cells, handling quoted fields with
- * embedded commas/newlines/escaped quotes ("") per RFC 4180. */
 export function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -49,7 +47,10 @@ export function parseCsvRows(text: string): string[][] {
   return rows;
 }
 
-export function rowsToRecords(allRows: string[][]): { header: string[]; rows: CsvRow[] } {
+export function rowsToRecords(allRows: string[][]): {
+  header: string[];
+  rows: CsvRow[];
+} {
   const header = allRows[0] ?? [];
   const rows = allRows
     .slice(1)
@@ -84,7 +85,6 @@ export async function readCsvFile(
   return rowsToRecords(parseCsvRows(text));
 }
 
-/** Writes via a temp file + rename so a reader never observes a half-written CSV. */
 export async function writeCsvFileAtomic(
   filePath: string,
   header: string[],

@@ -13,10 +13,6 @@ interface RunSnapshot {
   pendingApprovals: number;
 }
 
-/** Runs poll every 5s regardless of which page is open (see useRuns), so this
- * component can diff snapshots across polls and surface a toast the moment a
- * background run finishes or needs approval -- without it, the only way to
- * notice was to keep the Runs tab open and stare at it. */
 export function GlobalRunWatcher() {
   const { data } = useRuns();
   const { push } = useToast();
@@ -37,43 +33,72 @@ export function GlobalRunWatcher() {
         const pendingApprovals = run.pendingApprovals ?? 0;
         const label = commandLabel(run);
 
-        if (before?.status === "running" && run.status !== "running" && !viewingThisRun) {
+        if (
+          before?.status === "running" &&
+          run.status !== "running" &&
+          !viewingThisRun
+        ) {
           if (run.status === "completed") {
             push({
               tone: "success",
               title: `${label} finished`,
-              description: run.costUsd != null ? `$${run.costUsd.toFixed(3)} · done` : "Done",
-              action: { label: "View", onClick: () => navigate(`/runs/${run.id}`) },
+              description:
+                run.costUsd != null
+                  ? `$${run.costUsd.toFixed(3)} · done`
+                  : "Done",
+              action: {
+                label: "View",
+                onClick: () => navigate(`/runs/${run.id}`),
+              },
             });
           } else if (run.status === "error") {
             push({
               tone: "error",
               title: `${label} failed`,
               description: run.error,
-              action: { label: "View", onClick: () => navigate(`/runs/${run.id}`) },
+              action: {
+                label: "View",
+                onClick: () => navigate(`/runs/${run.id}`),
+              },
             });
           } else if (run.status === "stopped") {
             push({
               tone: "warning",
               title: `${label} stopped`,
-              action: { label: "View", onClick: () => navigate(`/runs/${run.id}`) },
+              action: {
+                label: "View",
+                onClick: () => navigate(`/runs/${run.id}`),
+              },
             });
           }
         }
 
-        if ((before?.pendingApprovals ?? 0) === 0 && pendingApprovals > 0 && !viewingThisRun) {
+        if (
+          (before?.pendingApprovals ?? 0) === 0 &&
+          pendingApprovals > 0 &&
+          !viewingThisRun
+        ) {
           push({
             tone: "warning",
             title: `${label} needs your approval`,
-            description: pendingApprovals > 1 ? `${pendingApprovals} tool calls waiting` : "A tool call is waiting",
-            action: { label: "Review", onClick: () => navigate(`/runs/${run.id}`) },
+            description:
+              pendingApprovals > 1
+                ? `${pendingApprovals} tool calls waiting`
+                : "A tool call is waiting",
+            action: {
+              label: "Review",
+              onClick: () => navigate(`/runs/${run.id}`),
+            },
           });
         }
       }
     }
 
     prevRef.current = new Map(
-      data.map((run) => [run.id, { status: run.status, pendingApprovals: run.pendingApprovals ?? 0 }]),
+      data.map((run) => [
+        run.id,
+        { status: run.status, pendingApprovals: run.pendingApprovals ?? 0 },
+      ]),
     );
   }, [data, push, navigate]);
 

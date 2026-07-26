@@ -42,19 +42,14 @@ export function DataTable<T>({
     });
   }, [rows, sort, columns]);
 
-  // A new filter/search/sort can shrink the row count enough that whatever
-  // page the user was on no longer exists -- reset to the first page rather
-  // than showing an empty table that looks like the filter matched nothing.
-  // Keyed on the row *count* (not the rows array reference) so an unrelated
-  // background refetch that returns an equal-length array -- e.g. the
-  // window-focus refetch every query here has on by default -- doesn't yank
-  // the user back to page 1 while they're browsing further in.
   useEffect(() => {
     setPage(0);
   }, [sortedRows.length, sort]);
 
   if (rows.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted">{emptyMessage}</p>;
+    return (
+      <p className="py-8 text-center text-sm text-muted">{emptyMessage}</p>
+    );
   }
 
   const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
@@ -72,8 +67,9 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   className={clsx(
-                    "whitespace-nowrap px-3 py-2.5 font-medium",
-                    col.sortValue && "cursor-pointer select-none hover:text-signal",
+                    "whitespace-nowrap px-3 py-2.5 font-semibold",
+                    col.sortValue &&
+                      "cursor-pointer select-none hover:text-signal",
                     col.className,
                   )}
                   onClick={() => {
@@ -96,10 +92,16 @@ export function DataTable<T>({
               <tr
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={clsx(onRowClick && "cursor-pointer transition-colors hover:bg-surface-2")}
+                className={clsx(
+                  onRowClick &&
+                    "cursor-pointer transition-colors hover:bg-surface-2",
+                )}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={clsx("px-3 py-2.5 align-top", col.className)}>
+                  <td
+                    key={col.key}
+                    className={clsx("px-3 py-2.5 align-top", col.className)}
+                  >
                     {col.render(row)}
                   </td>
                 ))}
@@ -111,7 +113,8 @@ export function DataTable<T>({
       {sortedRows.length > pageSize && (
         <div className="flex items-center justify-between border-t border-border/10 px-3 py-2.5 text-xs text-muted">
           <span>
-            {start + 1}-{Math.min(start + pageSize, sortedRows.length)} of {sortedRows.length}
+            {start + 1}-{Math.min(start + pageSize, sortedRows.length)} of{" "}
+            {sortedRows.length}
           </span>
           <div className="flex items-center gap-2">
             <button

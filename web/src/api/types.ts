@@ -1,5 +1,3 @@
-// Mirrors dashboard/server/src/lib/*.ts response shapes.
-
 export interface ScrapedJob {
   key: string;
   title: string;
@@ -18,7 +16,12 @@ export interface ScrapedJob {
   [extra: string]: unknown;
 }
 
-export type StatusBucket = "Active" | "Interview" | "Offer" | "Hired" | "Rejected/Closed";
+export type StatusBucket =
+  | "Active"
+  | "Interview"
+  | "Offer"
+  | "Hired"
+  | "Rejected/Closed";
 
 export interface TrackerRow {
   id: string;
@@ -142,6 +145,7 @@ export interface PlaceholderHit {
 }
 
 export interface ProfileData {
+  name: string | null;
   claudeMdSections: MarkdownSection[];
   skillFiles: { filename: string; sections: MarkdownSection[] }[];
   placeholders: PlaceholderHit[];

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaunchRun, useUpskillReports } from "../api/queries";
 import type { UpskillReport } from "../api/types";
@@ -7,9 +7,10 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { Markdown } from "../components/Markdown";
 import { NeutralPill } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
+import { StatCard } from "../components/StatCard";
 import { useTheme } from "../hooks/useTheme";
 import { shadeForText } from "../lib/color";
-import { inputClass } from "../lib/ui";
+import { inputClass, outlineButtonClass, primaryButtonClass } from "../lib/ui";
 
 const PRIORITY_COLORS: Record<string, string> = {
   critical: "#ef4444",
@@ -126,6 +127,17 @@ export default function Upskill() {
   const launchRun = useLaunchRun();
   const navigate = useNavigate();
 
+  const latestReport = reports[0];
+  const gapStats = useMemo(() => {
+    if (!latestReport) return null;
+    const byPriority = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const row of latestReport.gapHeatmap) {
+      const p = row.priority.toLowerCase();
+      if (p in byPriority) byPriority[p as keyof typeof byPriority]++;
+    }
+    return { total: latestReport.gapHeatmap.length, ...byPriority };
+  }, [latestReport]);
+
   const runAggregate = () => {
     launchRun.mutate({ command: "/upskill" }, { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) });
   };
@@ -150,7 +162,7 @@ export default function Upskill() {
             <button
               onClick={runAggregate}
               disabled={launchRun.isPending}
-              className="rounded-full bg-signal px-3.5 py-1.5 text-sm font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+              className={primaryButtonClass}
             >
               Run /upskill
             </button>
@@ -164,11 +176,24 @@ export default function Upskill() {
             <button
               onClick={runTargeted}
               disabled={launchRun.isPending || !targetUrl.trim()}
-              className="rounded-full border border-border/15 px-3.5 py-1.5 text-sm font-medium text-muted transition-transform hover:border-signal/30 hover:text-signal active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+              className={outlineButtonClass}
             >
               Run for this posting
             </button>
           </div>
+
+          {gapStats && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard label="Total gaps" value={gapStats.total} />
+              <StatCard label="Critical" value={gapStats.critical} accent={PRIORITY_COLORS.critical} />
+              <StatCard label="High priority" value={gapStats.high} accent={PRIORITY_COLORS.high} />
+              <StatCard
+                label="Est. study time"
+                value={latestReport?.totalEstimatedTime ?? "N/A"}
+                accent={PRIORITY_COLORS.medium}
+              />
+            </div>
+          )}
 
           {reports.length === 0 ? (
             <EmptyState

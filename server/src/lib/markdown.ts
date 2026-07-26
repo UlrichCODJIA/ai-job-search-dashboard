@@ -4,30 +4,25 @@ export interface MarkdownSection {
   content: string;
 }
 
-/** Splits a markdown document into sections at each ATX heading (`#`..`######`). */
 export function splitMarkdownSections(text: string): MarkdownSection[] {
   return parseMarkdownDocument(text).sections;
 }
 
-/** Extracts the body of a single `## <heading>` section, up to the next `##` heading or end of text. */
 export function extractSection(text: string, heading: string): string | null {
   const normalized = text.replace(/\r\n/g, "\n");
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`(?:^|\\n)##\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`);
+  const re = new RegExp(
+    `(?:^|\\n)##\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n##\\s+|$)`,
+  );
   const match = normalized.match(re);
   return match ? match[1].trim() : null;
 }
 
 export interface MarkdownDocument {
-  /** Raw text before the first heading (e.g. YAML frontmatter), preserved verbatim
-   * so a section edit + rewrite never silently drops it. */
   preamble: string;
   sections: MarkdownSection[];
 }
 
-/** Walks the document once, splitting it into heading-delimited sections while
- * also keeping the pre-heading preamble (splitMarkdownSections discards it) so
- * writeMarkdownDocument can round-trip losslessly. */
 export function parseMarkdownDocument(text: string): MarkdownDocument {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const sections: MarkdownSection[] = [];
@@ -38,7 +33,11 @@ export function parseMarkdownDocument(text: string): MarkdownDocument {
     const heading = line.match(/^(#{1,6})\s+(.*)$/);
     if (heading) {
       if (current) sections.push(current);
-      current = { level: heading[1].length, heading: heading[2].trim(), content: "" };
+      current = {
+        level: heading[1].length,
+        heading: heading[2].trim(),
+        content: "",
+      };
     } else if (current) {
       current.content += line + "\n";
     } else {
@@ -53,9 +52,6 @@ export function parseMarkdownDocument(text: string): MarkdownDocument {
   };
 }
 
-/** Inverse of parseMarkdownDocument: reconstructs a full markdown file from its
- * preamble + ordered sections. Only section *content* is expected to change
- * between parse and write; heading text/level and section order are preserved. */
 export function stringifyMarkdownDocument(doc: MarkdownDocument): string {
   const parts: string[] = [];
   if (doc.preamble) parts.push(doc.preamble);

@@ -2,14 +2,12 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 function looksLikeAiJobSearchCheckout(dir: string): boolean {
-  return existsSync(path.join(dir, "CLAUDE.md")) && existsSync(path.join(dir, ".claude"));
+  return (
+    existsSync(path.join(dir, "CLAUDE.md")) &&
+    existsSync(path.join(dir, ".claude"))
+  );
 }
 
-/** Locates the ai-job-search checkout this dashboard should read/write.
- *
- * This dashboard is its own separate repo and must never live inside (or be
- * auto-detected relative to) an ai-job-search checkout -- `AI_JOB_SEARCH_ROOT`
- * is always required, pointing at that checkout's path. */
 function findRepoRoot(): string {
   const override = process.env.AI_JOB_SEARCH_ROOT;
   if (!override) {
@@ -28,9 +26,6 @@ function findRepoRoot(): string {
 
 export const REPO_ROOT = findRepoRoot();
 
-// This dashboard's OWN root (server/, web/, its own package.json) -- always
-// relative to where this file lives, never to REPO_ROOT. This repo and the
-// ai-job-search checkout are always two separate directories.
 const DASHBOARD_ROOT = path.resolve(import.meta.dir, "..", "..", "..");
 
 export const paths = {
@@ -50,7 +45,13 @@ export const paths = {
     "skills",
     "job-application-assistant",
   ),
-  searchQueries: path.join(REPO_ROOT, ".claude", "skills", "job-scraper", "search-queries.md"),
+  searchQueries: path.join(
+    REPO_ROOT,
+    ".claude",
+    "skills",
+    "job-scraper",
+    "search-queries.md",
+  ),
   claudeSettings: path.join(REPO_ROOT, ".claude", "settings.json"),
   agentSkillsDir: path.join(REPO_ROOT, ".agents", "skills"),
   reportsDir: path.join(REPO_ROOT, "reports"),

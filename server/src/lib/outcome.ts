@@ -11,19 +11,13 @@ export interface OutcomeRecord {
   notes: string;
 }
 
-// Parses the exact format /outcome writes (documents/README.md's outcome.md spec):
-//   **Status:** in_progress | hired | offer_declined | rejected | no_response | interview_only
-//   **Date resolved:** YYYY-MM-DD
-//   ## Interview stages reached
-//   - [x] Phone screen (YYYY-MM-DD)
-//   ## Notes
 export function parseOutcomeMarkdown(rawText: string): OutcomeRecord {
-  // Normalize CRLF first: JS regex `.` never matches `\r`, so an un-normalized
-  // trailing `\r` on each line silently breaks the per-line stage regex below.
   const text = rawText.replace(/\r\n/g, "\n");
   const statusMatch = text.match(/\*\*Status:\*\*\s*(.+)/);
   const dateMatch = text.match(/\*\*Date resolved:\*\*\s*(.+)/);
-  const stagesMatch = text.match(/## Interview stages reached\n([\s\S]*?)(?=\n## |$)/);
+  const stagesMatch = text.match(
+    /## Interview stages reached\n([\s\S]*?)(?=\n## |$)/,
+  );
   const notesMatch = text.match(/## Notes\n([\s\S]*)$/);
 
   const stages: OutcomeStage[] = [];

@@ -18,9 +18,13 @@ const TRACKER_HEADER = [
   "source",
 ] as const;
 
-export type StatusBucket = "Active" | "Interview" | "Offer" | "Hired" | "Rejected/Closed";
+export type StatusBucket =
+  | "Active"
+  | "Interview"
+  | "Offer"
+  | "Hired"
+  | "Rejected/Closed";
 
-// Mirrors the status normalisation in .claude/commands/html-report.md Step 1.
 const STATUS_BUCKETS: Record<string, StatusBucket> = {
   applied: "Active",
   interview: "Interview",
@@ -43,9 +47,6 @@ export interface TrackerRow extends CsvRow {
   bucket: StatusBucket;
 }
 
-// Rows have no natural primary key, so derive one from position + content. If the file
-// changes between a GET and a PATCH, the id may no longer resolve -- updateTrackerRow
-// returns null in that case rather than risking a wrong-row edit.
 function rowId(row: CsvRow, index: number): string {
   const raw = `${row.date ?? ""}|${row.company ?? ""}|${row.role ?? ""}|${index}`;
   return Buffer.from(raw, "utf-8").toString("base64url");
@@ -60,10 +61,6 @@ export async function listTrackerRows(): Promise<TrackerRow[]> {
   }));
 }
 
-// Only status/notes are accepted: status is the one column /outcome itself
-// updates after row creation, and notes is the one column it appends to.
-// Every other column is set once when the row is created and read-only here,
-// same as the rest of ai-job-search's own design (see dashboard/README.md).
 export async function updateTrackerRow(
   id: string,
   patch: Partial<Pick<CsvRow, "status" | "notes">>,

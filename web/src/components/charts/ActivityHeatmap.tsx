@@ -1,15 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { ActivityDay } from "../../lib/activity";
 
-const CELL_PX = 16; // matches h-4/w-4
-const GAP_PX = 4; // matches gap-1
+const CELL_PX = 16;
+const GAP_PX = 4;
 const COLUMN_PITCH = CELL_PX + GAP_PX;
 
-// GitHub-contributions-style pixel grid (Vaulto's "Net Cashflow" mini-heatmap
-// pattern) -- a bespoke, textural visualization distinct from the donut/bar/
-// funnel/ring family, and genuinely data-driven (job_scraper first_seen dates).
-// Fills whatever width its card gives it by measuring the container and
-// picking as many trailing weeks as fit, same as GitHub's own graph does.
 export function ActivityHeatmap({
   days,
   onVisibleDaysChange,
@@ -24,7 +19,10 @@ export function ActivityHeatmap({
     const el = containerRef.current;
     if (!el) return;
     const measure = () => {
-      const fit = Math.max(1, Math.floor((el.clientWidth + GAP_PX) / COLUMN_PITCH));
+      const fit = Math.max(
+        1,
+        Math.floor((el.clientWidth + GAP_PX) / COLUMN_PITCH),
+      );
       setColumns(fit);
     };
     measure();
@@ -46,15 +44,21 @@ export function ActivityHeatmap({
 
   return (
     <div ref={containerRef} className="w-full">
-      <div role="img" aria-label={ariaLabel} className="grid grid-flow-col grid-rows-7 gap-1">
+      <div
+        role="img"
+        aria-label={ariaLabel}
+        className="animate-heatmap-in grid grid-flow-col grid-rows-7 gap-1"
+      >
         {visibleDays.map((d) => {
           const intensity = d.count === 0 ? 0.08 : 0.3 + (d.count / max) * 0.7;
           return (
             <div
               key={d.date}
               title={`${d.date}: ${d.count} posting${d.count === 1 ? "" : "s"}`}
-              className="h-4 w-4 rounded-sm"
-              style={{ backgroundColor: `rgb(var(--color-signal) / ${intensity})` }}
+              className="h-4 w-4 rounded"
+              style={{
+                backgroundColor: `rgb(var(--color-signal) / ${intensity})`,
+              }}
             />
           );
         })}

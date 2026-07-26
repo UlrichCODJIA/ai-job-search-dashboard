@@ -17,6 +17,7 @@ export interface RunRecord {
   sessionId?: string;
   costUsd?: number;
   error?: string;
+  threadRootId?: string;
 }
 
 interface RunStoreFile {
@@ -55,7 +56,10 @@ export async function createRun(record: RunRecord): Promise<void> {
   });
 }
 
-export async function updateRun(id: string, patch: Partial<RunRecord>): Promise<void> {
+export async function updateRun(
+  id: string,
+  patch: Partial<RunRecord>,
+): Promise<void> {
   await withFileLock(STORE_PATH, async () => {
     const store = await readStore();
     const index = store.runs.findIndex((r) => r.id === id);
@@ -65,14 +69,17 @@ export async function updateRun(id: string, patch: Partial<RunRecord>): Promise<
   });
 }
 
-export async function getSessionForKey(key: string): Promise<string | undefined> {
+export async function getSessionForKey(
+  key: string,
+): Promise<string | undefined> {
   const { sessionByKey } = await readStore();
-  // Object.hasOwn guard: a bare `sessionByKey[key]` for key === "__proto__" reads back
-  // Object.prototype (truthy) instead of undefined, since sessionByKey is a plain {}.
   return Object.hasOwn(sessionByKey, key) ? sessionByKey[key] : undefined;
 }
 
-export async function setSessionForKey(key: string, sessionId: string): Promise<void> {
+export async function setSessionForKey(
+  key: string,
+  sessionId: string,
+): Promise<void> {
   await withFileLock(STORE_PATH, async () => {
     const store = await readStore();
     store.sessionByKey[key] = sessionId;

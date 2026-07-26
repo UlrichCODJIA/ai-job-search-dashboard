@@ -28,8 +28,8 @@ export const OverviewIcon = (props: SVGProps<SVGSVGElement>) => (
 
 export const DiscoveryIcon = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
-    <circle cx="9" cy="9" r="5" />
-    <line x1="13" y1="13" x2="17" y2="17" />
+    <circle cx="10" cy="10" r="7" />
+    <path d="M12.8 7.2 L11 11 L7.2 12.8 L9 9 Z" />
   </Icon>
 );
 
@@ -79,8 +79,8 @@ export const SearchIcon = (props: SVGProps<SVGSVGElement>) => (
 
 export const SettingsIcon = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
+    <path d="M10 3 L16.06 6.5 V13.5 L10 17 L3.94 13.5 V6.5 Z" />
     <circle cx="10" cy="10" r="2.6" />
-    <path d="M10 3.5 V5.5 M10 14.5 V16.5 M3.5 10 H5.5 M14.5 10 H16.5 M5.4 5.4 L6.8 6.8 M13.2 13.2 L14.6 14.6 M14.6 5.4 L13.2 6.8 M6.8 13.2 L5.4 14.6" />
   </Icon>
 );
 
@@ -95,5 +95,12 @@ export const MenuIcon = (props: SVGProps<SVGSVGElement>) => (
 export const ChevronLeftIcon = (props: SVGProps<SVGSVGElement>) => (
   <Icon {...props}>
     <path d="M12 5 L7 10 L12 15" />
+  </Icon>
+);
+
+export const PlusIcon = (props: SVGProps<SVGSVGElement>) => (
+  <Icon {...props}>
+    <line x1="10" y1="4" x2="10" y2="16" />
+    <line x1="4" y1="10" x2="16" y2="10" />
   </Icon>
 );

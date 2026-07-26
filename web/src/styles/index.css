@@ -4,34 +4,37 @@
 
 :root {
   color-scheme: dark;
-  /* Dark theme (default): layered near-blacks, phosphor-cyan signal accent -
-     "mission control" rather than another generic slate-and-blue SaaS shell. */
-  --color-base: 8 9 13;
-  --color-surface: 16 18 24;
-  --color-surface-2: 23 26 34;
+  /* Dark theme: warm charcoal panel, teal signal accent, violet secondary. */
+  --color-base: 13 11 15;
+  --color-surface: 24 20 26;
+  --color-surface-2: 34 28 38;
   --color-border: 148 163 184;
-  --color-ink: 244 246 249;
-  --color-muted: 148 163 184;
-  --color-signal: 45 212 234;
-  /* Text drawn on top of a solid bg-signal fill. Dark theme's signal is a
-     bright cyan, so dark navy text reads clearly; light theme's signal is a
-     deeper, more saturated teal, so the same dark text nearly disappears -
-     this token keeps that pairing correct in both themes instead of hardcoding
-     one text color everywhere bg-signal is used. */
-  --color-signal-ink: 4 32 42;
+  --color-ink: 247 245 250;
+  --color-muted: 161 150 168;
+  --color-signal: 8 145 178;
+  /* Text/icons drawn on top of a solid bg-signal fill -- white in both
+     themes, matching the rest of the brand's filled-pill treatment. */
+  --color-signal-ink: 255 255 255;
+  /* Secondary brand-adjacent accent (violet) for comparison/secondary chart
+     roles - kept as its own token rather than a hardcoded hex so it can be
+     referenced from CSS (the body wash below) as well as Tailwind classes. */
+  --color-accent-2: 167 139 250;
+  --color-accent-2-ink: 30 17 71;
 }
 
 html.light {
   color-scheme: light;
-  /* Light theme: elevated warm neutrals instead of stark white. */
-  --color-base: 247 246 242;
+  /* Light theme: warm off-white base, same teal/violet accents as dark. */
+  --color-base: 252 251 248;
   --color-surface: 255 255 255;
-  --color-surface-2: 241 239 234;
+  --color-surface-2: 246 244 248;
   --color-border: 15 23 42;
   --color-ink: 24 24 27;
   --color-muted: 82 82 91;
   --color-signal: 8 145 178;
   --color-signal-ink: 255 255 255;
+  --color-accent-2: 124 58 237;
+  --color-accent-2-ink: 255 255 255;
 }
 
 body {
@@ -43,7 +46,7 @@ body {
   background-color: rgb(var(--color-base));
   background-image:
     radial-gradient(1100px 750px at 8% -10%, rgb(var(--color-signal) / 0.16), transparent 60%),
-    radial-gradient(900px 800px at 95% 5%, rgb(139 92 246 / 0.12), transparent 55%),
+    radial-gradient(900px 800px at 95% 5%, rgb(var(--color-accent-2) / 0.12), transparent 55%),
     radial-gradient(1200px 700px at 45% 115%, rgb(245 158 11 / 0.08), transparent 60%);
   background-attachment: fixed;
 }
@@ -100,4 +103,180 @@ body {
 }
 .animate-badge-pulse {
   animation: badge-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes heatmap-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-heatmap-in {
+  animation: heatmap-in 0.35s ease-out;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-page-in {
+  animation: page-in 0.22s ease-out;
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+.animate-toast-out {
+  animation: toast-out 0.18s ease-in;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.dialog-overlay[data-state="open"] {
+  animation: overlay-in 0.2s ease-out;
+}
+.dialog-overlay[data-state="closed"] {
+  animation: overlay-out 0.16s ease-in;
+}
+
+@keyframes drawer-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes drawer-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+.drawer-content[data-state="open"] {
+  animation: drawer-in-right 0.22s ease-out;
+}
+.drawer-content[data-state="closed"] {
+  animation: drawer-out-right 0.16s ease-in;
+}
+
+@keyframes drawer-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes drawer-out-left {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+}
+.mobile-nav-content[data-state="open"] {
+  animation: drawer-in-left 0.22s ease-out;
+}
+.mobile-nav-content[data-state="closed"] {
+  animation: drawer-out-left 0.16s ease-in;
+}
+
+@keyframes sheet-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-out-top {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.search-sheet-content[data-state="open"] {
+  animation: sheet-in-top 0.2s ease-out;
+}
+.search-sheet-content[data-state="closed"] {
+  animation: sheet-out-top 0.16s ease-in;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.animate-dropdown-in {
+  animation: dropdown-in 0.16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Duration is shortened, not animation:none -- Radix's Presence (the 3
+     dialogs: Drawer, MobileNavDrawer, TopNav's mobile search sheet) decides
+     when to unmount a closed dialog by listening for this exact node's
+     animationend event, so the animation must still run and complete, just
+     near-instantly. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

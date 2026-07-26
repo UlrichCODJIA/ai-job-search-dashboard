@@ -8,25 +8,25 @@ export interface PortalSkill {
   enabled: boolean;
 }
 
-// SKILL.md's frontmatter is a small, fixed, hand-authored shape (see
-// .agents/skills/linkedin-search/SKILL.md for the canonical example) -- a full
-// YAML parser is unwarranted for reading a handful of known scalar fields out
-// of it, matching this codebase's existing preference for small, targeted
-// parsers over general-purpose libraries (see markdown.ts, csv.ts).
 function extractFrontmatter(text: string): string | null {
   const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return match ? match[1] : null;
 }
 
-function extractScalarField(frontmatter: string, field: string): string | undefined {
-  const match = frontmatter.match(new RegExp(`^${field}:\\s*(.+?)\\s*(?:#.*)?$`, "m"));
+function extractScalarField(
+  frontmatter: string,
+  field: string,
+): string | undefined {
+  const match = frontmatter.match(
+    new RegExp(`^${field}:\\s*(.+?)\\s*(?:#.*)?$`, "m"),
+  );
   return match?.[1]?.trim();
 }
 
-/** First line of a `description: >` folded block scalar, or an inline
- * `description: "..."` value -- just enough for a short list preview. */
 function extractDescriptionPreview(frontmatter: string): string {
-  const blockMatch = frontmatter.match(/^description:\s*>-?\s*\r?\n((?:[ \t]+.*\r?\n?)+)/m);
+  const blockMatch = frontmatter.match(
+    /^description:\s*>-?\s*\r?\n((?:[ \t]+.*\r?\n?)+)/m,
+  );
   if (blockMatch) {
     const firstLine = blockMatch[1].split(/\r?\n/)[0]?.trim();
     if (firstLine) return firstLine;
@@ -65,5 +65,7 @@ export async function listPortalSkills(): Promise<PortalSkill[]> {
     }),
   );
 
-  return skills.filter((s): s is PortalSkill => s !== null).sort((a, b) => a.name.localeCompare(b.name));
+  return skills
+    .filter((s): s is PortalSkill => s !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }

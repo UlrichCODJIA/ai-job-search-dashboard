@@ -1,20 +1,12 @@
 import type { ReactNode } from "react";
 import { EmptyState } from "./EmptyState";
+import { Spinner } from "./Spinner";
 
 interface QueryLike {
   isLoading: boolean;
   isError: boolean;
 }
 
-/** Gates rendering on one or more TanStack Query results, replacing the
- * `if (query.isLoading) return ...; if (query.isError) return ...;` guard
- * copy-pasted at the top of most pages. Pass an array when a page depends on
- * more than one query (e.g. Overview.tsx's jobs + tracker) -- any query
- * loading shows the loading state, any query erroring shows the error state.
- *
- * `loadingFallback`/`errorFallback` let a page substitute its own presentation
- * (Settings.tsx's inline guards use a plainer error message than the standard
- * EmptyState) while still sharing the branching logic itself. */
 export function QueryState({
   query,
   loadingFallback,
@@ -29,7 +21,16 @@ export function QueryState({
   const queries = Array.isArray(query) ? query : [query];
 
   if (queries.some((q) => q.isLoading)) {
-    return <>{loadingFallback ?? <p className="text-sm text-muted">Loading...</p>}</>;
+    return (
+      <>
+        {loadingFallback ?? (
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted">
+            <Spinner size={16} className="text-signal" />
+            Loading...
+          </div>
+        )}
+      </>
+    );
   }
 
   if (queries.some((q) => q.isError)) {

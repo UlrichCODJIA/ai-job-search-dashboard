@@ -3,8 +3,6 @@ export interface ActivityDay {
   count: number;
 }
 
-/** Buckets first_seen dates into a trailing daily series (oldest -> newest),
- * padded with zero-count days so the grid always has a full, even shape. */
 export function buildActivityDays(dates: string[], days = 365): ActivityDay[] {
   const counts = new Map<string, number>();
   for (const date of dates) {

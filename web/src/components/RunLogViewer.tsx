@@ -85,6 +85,13 @@ export function RunLogViewer({ events }: { events: RunEvent[] }) {
                 ■ stopped by user
               </p>
             );
+          case "thread_reply":
+            return (
+              <div key={i} className="my-1 border-t border-white/10 pt-2 text-slate-400">
+                <span className="text-signal">↳ you replied:</span>{" "}
+                <span className="whitespace-pre-wrap">{event.message}</span>
+              </div>
+            );
           case "permission_channel_broken":
             return (
               <p key={i} className="rounded-lg border border-red-500/40 bg-red-500/10 p-2 text-red-300">

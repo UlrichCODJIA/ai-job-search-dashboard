@@ -19,15 +19,21 @@ function norm(value: string): string {
   return value.trim().toLowerCase();
 }
 
-/** Derived from the raw status column (not the 5-bucket grouping), so a resolved
- * "interview_only" row still counts as having reached an interview -- the bucket
- * mapping alone would fold it into Rejected/Closed and lose that signal. */
 export function computeFunnel(rows: TrackerRow[]): FunnelStageCount[] {
   return [
     { label: "Applied", value: rows.length },
-    { label: "Interview", value: rows.filter((r) => INTERVIEW_OR_BEYOND.has(norm(r.status))).length },
-    { label: "Offer", value: rows.filter((r) => OFFER_OR_BEYOND.has(norm(r.status))).length },
-    { label: "Hired", value: rows.filter((r) => norm(r.status) === "hired").length },
+    {
+      label: "Interview",
+      value: rows.filter((r) => INTERVIEW_OR_BEYOND.has(norm(r.status))).length,
+    },
+    {
+      label: "Offer",
+      value: rows.filter((r) => OFFER_OR_BEYOND.has(norm(r.status))).length,
+    },
+    {
+      label: "Hired",
+      value: rows.filter((r) => norm(r.status) === "hired").length,
+    },
   ];
 }
 
@@ -37,19 +43,50 @@ export function daysSince(dateStr: string): number | null {
   return Math.floor((Date.now() - parsed) / (1000 * 60 * 60 * 24));
 }
 
-/** High-fit or Strong/Good-Fit-ranked jobs not yet reflected in the tracker (by company). */
-export function promisingUnappliedJobs(jobs: ScrapedJob[], trackerRows: TrackerRow[]): ScrapedJob[] {
+export function promisingUnappliedJobs(
+  jobs: ScrapedJob[],
+  trackerRows: TrackerRow[],
+): ScrapedJob[] {
   const appliedCompanies = new Set(trackerRows.map((r) => norm(r.company)));
   return jobs.filter((job) => {
     if (job.status === "expired" || job.status === "skipped") return false;
     if (appliedCompanies.has(norm(job.company))) return false;
     const highFit = job.fit === "high";
-    const strongVerdict = job.rank_verdict ? STRONG_FIT_VERDICTS.has(norm(job.rank_verdict)) : false;
+    const strongVerdict = job.rank_verdict
+      ? STRONG_FIT_VERDICTS.has(norm(job.rank_verdict))
+      : false;
     return highFit || strongVerdict;
   });
 }
 
-/** Active-bucket rows whose applied date is old enough to warrant a follow-up or /outcome. */
-export function staleActiveRows(rows: TrackerRow[], thresholdDays = 14): TrackerRow[] {
-  return rows.filter((r) => r.bucket === "Active" && (daysSince(r.date) ?? 0) >= thresholdDays);
+export function staleActiveRows(
+  rows: TrackerRow[],
+  thresholdDays = 14,
+): TrackerRow[] {
+  return rows.filter(
+    (r) => r.bucket === "Active" && (daysSince(r.date) ?? 0) >= thresholdDays,
+  );
+}
+
+export const GROUP_BAR_PALETTE = [
+  "#0891b2",
+  "#8b5cf6",
+  "#84cc16",
+  "#f59e0b",
+  "#ec4899",
+];
+
+export function groupCount(rows: TrackerRow[], key: "sector" | "channel") {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const value = (row[key] ?? "").trim() || "Unspecified";
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .map((entry, i) => ({
+      ...entry,
+      color: GROUP_BAR_PALETTE[i % GROUP_BAR_PALETTE.length],
+    }));
 }

@@ -11,10 +11,15 @@ import {
   useUpdateSalaryCompany,
   useUpdateSalaryMetadata,
 } from "../api/queries";
-import type { SalaryCategory, SalaryCompanyEntry, SalaryMetadata } from "../api/types";
+import type {
+  SalaryCategory,
+  SalaryCompanyEntry,
+  SalaryMetadata,
+} from "../api/types";
 import { Drawer } from "../components/Drawer";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
+import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { QueryState } from "../components/QueryState";
 import { useConfirm } from "../hooks/useConfirm";
 import { inputClass, outlineButtonClass, primaryButtonClass } from "../lib/ui";
@@ -47,7 +52,11 @@ function CompanyCard({
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-base font-bold tracking-tight text-ink">
           {entry.company}
-          {entry.city ? <span className="ml-2 text-xs font-sans font-normal text-muted">{entry.city}</span> : null}
+          {entry.city ? (
+            <span className="ml-2 text-xs font-sans font-normal text-muted">
+              {entry.city}
+            </span>
+          ) : null}
         </h2>
         {actions}
       </div>
@@ -65,17 +74,27 @@ function CompanyCard({
             <tbody className="divide-y divide-border/10">
               {Object.entries(categories).map(([name, cat]) => (
                 <tr key={name}>
-                  <td className="whitespace-nowrap py-1.5 pr-3 font-medium text-ink">{name}</td>
-                  <td className="whitespace-nowrap py-1.5 pr-3 text-muted">{cat.count ?? "N/A*"}</td>
-                  <td className="whitespace-nowrap py-1.5 pr-3 text-muted">{cat.index ?? "N/A"}</td>
-                  <td className="whitespace-nowrap py-1.5 text-muted">{vsBaseline(cat.index, baseline)}</td>
+                  <td className="whitespace-nowrap py-1.5 pr-3 font-medium text-ink">
+                    {name}
+                  </td>
+                  <td className="whitespace-nowrap py-1.5 pr-3 text-muted">
+                    {cat.count ?? "N/A*"}
+                  </td>
+                  <td className="whitespace-nowrap py-1.5 pr-3 text-muted">
+                    {cat.index ?? "N/A"}
+                  </td>
+                  <td className="whitespace-nowrap py-1.5 text-muted">
+                    {vsBaseline(cat.index, baseline)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className="mt-2 text-xs text-muted">No category data for this company.</p>
+        <p className="mt-2 text-xs text-muted">
+          No category data for this company.
+        </p>
       )}
     </div>
   );
@@ -92,7 +111,9 @@ function emptyRow(): CategoryRowState {
   return { key: crypto.randomUUID(), label: "", count: "", index: "" };
 }
 
-function categoriesToRows(categories?: Record<string, SalaryCategory>): CategoryRowState[] {
+function categoriesToRows(
+  categories?: Record<string, SalaryCategory>,
+): CategoryRowState[] {
   if (!categories) return [];
   return Object.entries(categories).map(([label, cat]) => ({
     key: crypto.randomUUID(),
@@ -102,7 +123,9 @@ function categoriesToRows(categories?: Record<string, SalaryCategory>): Category
   }));
 }
 
-function rowsToCategories(rows: CategoryRowState[]): Record<string, SalaryCategory> | undefined {
+function rowsToCategories(
+  rows: CategoryRowState[],
+): Record<string, SalaryCategory> | undefined {
   const result: Record<string, SalaryCategory> = {};
   for (const row of rows) {
     if (!row.label.trim()) continue;
@@ -140,17 +163,21 @@ function CompanyFormDrawer({
     setValidationError(null);
     createCompany.reset();
     updateCompany.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, entry]);
 
   const updateRow = (i: number, patch: Partial<CategoryRowState>) => {
-    setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    setRows((prev) =>
+      prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
+    );
   };
-  const removeRow = (i: number) => setRows((prev) => prev.filter((_, idx) => idx !== i));
+  const removeRow = (i: number) =>
+    setRows((prev) => prev.filter((_, idx) => idx !== i));
   const addRow = () => setRows((prev) => [...prev, emptyRow()]);
 
   const isPending = isEdit ? updateCompany.isPending : createCompany.isPending;
-  const mutationError = (isEdit ? updateCompany.error : createCompany.error) as Error | null;
+  const mutationError = (
+    isEdit ? updateCompany.error : createCompany.error
+  ) as Error | null;
   const error = validationError ?? mutationError?.message;
 
   const handleSubmit = () => {
@@ -158,11 +185,15 @@ function CompanyFormDrawer({
       if (!row.label.trim()) continue;
       const label = row.label.trim();
       if (row.count.trim() && !Number.isFinite(Number(row.count))) {
-        setValidationError(`"${label}" has a non-numeric count: "${row.count}".`);
+        setValidationError(
+          `"${label}" has a non-numeric count: "${row.count}".`,
+        );
         return;
       }
       if (row.index.trim() && !Number.isFinite(Number(row.index))) {
-        setValidationError(`"${label}" has a non-numeric salary/index: "${row.index}".`);
+        setValidationError(
+          `"${label}" has a non-numeric salary/index: "${row.index}".`,
+        );
         return;
       }
     }
@@ -173,17 +204,26 @@ function CompanyFormDrawer({
       categories: rowsToCategories(rows),
     };
     if (isEdit && entry) {
-      updateCompany.mutate({ originalName: entry.company, entry: payload }, { onSuccess: () => onOpenChange(false) });
+      updateCompany.mutate(
+        { originalName: entry.company, entry: payload },
+        { onSuccess: () => onOpenChange(false) },
+      );
     } else {
       createCompany.mutate(payload, { onSuccess: () => onOpenChange(false) });
     }
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} title={isEdit ? `Edit ${entry?.company}` : "Add company"}>
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? `Edit ${entry?.company}` : "Add company"}
+    >
       <div className="flex flex-col gap-4 text-sm">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted">Company name</label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Company name
+          </label>
           <input
             value={company}
             onChange={(e) => setCompany(e.target.value)}
@@ -192,11 +232,20 @@ function CompanyFormDrawer({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted">City (optional)</label>
-          <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className={inputClass} />
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted">
+            City (optional)
+          </label>
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="City"
+            className={inputClass}
+          />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-muted">Categories</label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-muted">
+            Categories
+          </label>
           <div className="flex flex-col gap-2">
             {rows.map((row, i) => (
               <div key={row.key} className="flex items-center gap-1.5">
@@ -230,14 +279,22 @@ function CompanyFormDrawer({
                 </button>
               </div>
             ))}
-            <button type="button" onClick={addRow} className={`self-start shrink-0 ${outlineButtonClass}`}>
+            <button
+              type="button"
+              onClick={addRow}
+              className={`self-start shrink-0 ${outlineButtonClass}`}
+            >
               + Add category
             </button>
           </div>
         </div>
         {error && <p className="text-xs text-red-500">{error}</p>}
         <div className="border-t border-border/10 pt-4">
-          <button onClick={handleSubmit} disabled={isPending || !company.trim()} className={primaryButtonClass}>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending || !company.trim()}
+            className={primaryButtonClass}
+          >
             {isPending ? "Saving..." : isEdit ? "Save changes" : "Add company"}
           </button>
         </div>
@@ -249,13 +306,13 @@ function CompanyFormDrawer({
 function MetadataEditor({ metadata }: { metadata: SalaryMetadata }) {
   const [open, setOpen] = useState(false);
   const [source, setSource] = useState(metadata.source ?? "");
-  const [baseline, setBaseline] = useState(String(metadata.index_baseline ?? 0));
+  const [baseline, setBaseline] = useState(
+    String(metadata.index_baseline ?? 0),
+  );
   const [label, setLabel] = useState(metadata.index_label ?? "");
-  const [description, setDescription] = useState(metadata.baseline_description ?? "");
-  // Tracks whether the user has unsaved edits, so a background refetch (another
-  // company add/edit/delete invalidating salary data, or refetchOnWindowFocus)
-  // doesn't wipe out what they're mid-typing here -- this component is always
-  // mounted, so it can't rely on a remount key like CompanyFormDrawer's `open`.
+  const [description, setDescription] = useState(
+    metadata.baseline_description ?? "",
+  );
   const [dirty, setDirty] = useState(false);
   const updateMetadata = useUpdateSalaryMetadata();
 
@@ -265,7 +322,6 @@ function MetadataEditor({ metadata }: { metadata: SalaryMetadata }) {
     setBaseline(String(metadata.index_baseline ?? 0));
     setLabel(metadata.index_label ?? "");
     setDescription(metadata.baseline_description ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [metadata]);
 
   const handleSave = () => {
@@ -290,8 +346,11 @@ function MetadataEditor({ metadata }: { metadata: SalaryMetadata }) {
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between text-left">
-        <h2 className="text-sm font-bold tracking-tight text-ink">Baseline settings</h2>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <InlineSectionHeading>Baseline settings</InlineSectionHeading>
         <span className="text-xs text-muted">{open ? "Hide ▲" : "Show ▼"}</span>
       </button>
       {open && (
@@ -336,12 +395,22 @@ function MetadataEditor({ metadata }: { metadata: SalaryMetadata }) {
             className={inputClass}
           />
           <div className="flex items-center gap-2">
-            <button onClick={handleSave} disabled={updateMetadata.isPending} className={`self-start ${primaryButtonClass}`}>
-              {updateMetadata.isPending ? "Saving..." : "Save baseline settings"}
+            <button
+              onClick={handleSave}
+              disabled={updateMetadata.isPending}
+              className={`self-start ${primaryButtonClass}`}
+            >
+              {updateMetadata.isPending
+                ? "Saving..."
+                : "Save baseline settings"}
             </button>
-            {updateMetadata.isSuccess && <span className="text-xs text-emerald-500">Saved</span>}
+            {updateMetadata.isSuccess && (
+              <span className="text-xs text-emerald-500">Saved</span>
+            )}
             {updateMetadata.isError && (
-              <span className="text-xs text-red-500">{(updateMetadata.error as Error).message}</span>
+              <span className="text-xs text-red-500">
+                {(updateMetadata.error as Error).message}
+              </span>
             )}
           </div>
         </div>
@@ -362,7 +431,8 @@ export default function Salary() {
 
   const searchQuery = useQuery({
     queryKey: queryKeys.salarySearch(submitted),
-    queryFn: () => api.salary.search(submitted) as Promise<SalaryCompanySearchEntry[]>,
+    queryFn: () =>
+      api.salary.search(submitted) as Promise<SalaryCompanySearchEntry[]>,
     enabled: submitted.length > 0,
   });
 
@@ -409,8 +479,12 @@ export default function Salary() {
           ) : (
             <>
               <p className="text-xs text-muted">
-                {status.companyCount} {status.companyCount === 1 ? "company" : "companies"} indexed
-                {status.metadata?.source ? ` from ${String(status.metadata.source)}` : ""}.
+                {status.companyCount}{" "}
+                {status.companyCount === 1 ? "company" : "companies"} indexed
+                {status.metadata?.source
+                  ? ` from ${String(status.metadata.source)}`
+                  : ""}
+                .
               </p>
               <form
                 onSubmit={(e) => {
@@ -425,34 +499,44 @@ export default function Salary() {
                   placeholder="Search company name..."
                   className={`w-72 ${inputClass}`}
                 />
-                <button
-                  type="submit"
-                  className="rounded-full bg-signal px-3.5 py-1.5 text-sm font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97]"
-                >
+                <button type="submit" className={primaryButtonClass}>
                   Search
                 </button>
               </form>
 
-              {searchQuery.isFetching && <p className="text-sm text-muted">Searching...</p>}
+              {searchQuery.isFetching && (
+                <p className="text-sm text-muted">Searching...</p>
+              )}
               {searchQuery.isError && (
-                <p className="text-sm text-red-500">{(searchQuery.error as Error).message}</p>
+                <p className="text-sm text-red-500">
+                  {(searchQuery.error as Error).message}
+                </p>
               )}
               {searchQuery.data && searchQuery.data.length === 0 && (
                 <p className="text-sm text-muted">No matching company found.</p>
               )}
               {searchQuery.data?.map((entry) => (
-                <CompanyCard key={entry.company} entry={entry} baseline={baseline} />
+                <CompanyCard
+                  key={entry.company}
+                  entry={entry}
+                  baseline={baseline}
+                />
               ))}
               {status.metadata?.baseline_description && (
-                <p className="text-xs text-muted">{String(status.metadata.baseline_description)}</p>
+                <p className="text-xs text-muted">
+                  {String(status.metadata.baseline_description)}
+                </p>
               )}
             </>
           )}
 
           <section className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-tight text-ink">Manage companies</h2>
-              <button onClick={openAddForm} className={`shrink-0 ${outlineButtonClass}`}>
+              <InlineSectionHeading>Manage companies</InlineSectionHeading>
+              <button
+                onClick={openAddForm}
+                className={`shrink-0 ${outlineButtonClass}`}
+              >
                 + Add company
               </button>
             </div>
@@ -467,7 +551,7 @@ export default function Salary() {
                 }
               />
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {companies.map((entry) => (
                   <CompanyCard
                     key={entry.company}
@@ -475,7 +559,10 @@ export default function Salary() {
                     baseline={baseline}
                     actions={
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <button onClick={() => openEditForm(entry)} className={`shrink-0 ${outlineButtonClass}`}>
+                        <button
+                          onClick={() => openEditForm(entry)}
+                          className={`shrink-0 ${outlineButtonClass}`}
+                        >
                           Edit
                         </button>
                         <button
@@ -487,7 +574,9 @@ export default function Salary() {
                               : "border-border/15 text-muted hover:border-red-500/30 hover:text-red-400"
                           }`}
                         >
-                          {confirmDelete.isArmed(entry.company) ? "Confirm?" : "Delete"}
+                          {confirmDelete.isArmed(entry.company)
+                            ? "Confirm?"
+                            : "Delete"}
                         </button>
                       </div>
                     }
@@ -496,13 +585,19 @@ export default function Salary() {
               </div>
             )}
             {deleteCompany.isError && (
-              <p className="text-xs text-red-500">{(deleteCompany.error as Error).message}</p>
+              <p className="text-xs text-red-500">
+                {(deleteCompany.error as Error).message}
+              </p>
             )}
           </section>
 
           {status?.available && <MetadataEditor metadata={metadata} />}
 
-          <CompanyFormDrawer entry={formEntry} open={formOpen} onOpenChange={setFormOpen} />
+          <CompanyFormDrawer
+            entry={formEntry}
+            open={formOpen}
+            onOpenChange={setFormOpen}
+          />
         </div>
       )}
     </QueryState>

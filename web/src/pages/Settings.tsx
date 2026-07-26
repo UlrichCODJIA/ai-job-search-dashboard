@@ -7,6 +7,7 @@ import {
   useUpdateSettings,
 } from "../api/queries";
 import { PageHeader } from "../components/layout/PageHeader";
+import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { QueryState } from "../components/QueryState";
 import { primaryButtonClass } from "../lib/ui";
 
@@ -41,7 +42,7 @@ function SearchQueriesEditor() {
           <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold tracking-tight text-ink">Search queries</h2>
+                <InlineSectionHeading>Search queries</InlineSectionHeading>
                 <p className="text-xs text-muted">
                   Drives what <code>/scrape</code> searches for. Edits here save straight to{" "}
                   <code>.claude/skills/job-scraper/search-queries.md</code>.
@@ -100,7 +101,7 @@ function PermissionsEditor() {
           <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold tracking-tight text-ink">Auto-approved commands</h2>
+                <InlineSectionHeading>Auto-approved commands</InlineSectionHeading>
                 <p className="text-xs text-muted">
                   Tool patterns here run without an approval prompt. Only add commands you trust. Saves to{" "}
                   <code>.claude/settings.json</code>.
@@ -164,7 +165,7 @@ function InstalledPortals() {
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-      <h2 className="text-sm font-bold tracking-tight text-ink">Installed portals</h2>
+      <InlineSectionHeading>Installed portals</InlineSectionHeading>
       <p className="mb-3 text-xs text-muted">
         Job-board search skills <code>/scrape</code> runs. Add more with <code>/add-portal</code> from Runs.
       </p>
@@ -208,8 +209,10 @@ export default function Settings() {
         subtitle="Configure how Claude Code searches and acts on your behalf, no file editor needed."
       />
       <SearchQueriesEditor />
-      <PermissionsEditor />
-      <InstalledPortals />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PermissionsEditor />
+        <InstalledPortals />
+      </div>
     </div>
   );
 }

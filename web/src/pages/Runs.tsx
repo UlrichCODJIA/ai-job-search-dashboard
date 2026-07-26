@@ -1,15 +1,28 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { KNOWN_COMMANDS } from "../api/runTypes";
-import { useLaunchRun, useReplyToRun, useReports, useRun, useRuns, useStopRun } from "../api/queries";
+import type { RunEvent, RunRecord } from "../api/runTypes";
+import {
+  useLaunchRun,
+  useReplyToRun,
+  useReports,
+  useRun,
+  useRunLogs,
+  useRuns,
+  useStopRun,
+} from "../api/queries";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
+import {
+  InlineSectionHeading,
+  SectionHeading,
+} from "../components/layout/SectionHeading";
 import { NeutralPill } from "../components/Pill";
 import { PermissionCard } from "../components/PermissionCard";
 import { QueryState } from "../components/QueryState";
 import { RunLogViewer } from "../components/RunLogViewer";
 import { useRunSocket } from "../hooks/useRunSocket";
-import { inputClass } from "../lib/ui";
+import { inputClass, primaryButtonClass } from "../lib/ui";
 
 function relativeTime(ms: number): string {
   const diff = Date.now() - ms;
@@ -19,6 +32,34 @@ function relativeTime(ms: number): string {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.round(hours / 24)}d ago`;
+}
+
+interface RunThread {
+  rootId: string;
+  rootRun: RunRecord;
+  latestRun: RunRecord;
+  replyCount: number;
+}
+
+function groupIntoThreads(runs: RunRecord[]): RunThread[] {
+  const groups = new Map<string, RunRecord[]>();
+  for (const run of runs) {
+    const rootId = run.threadRootId ?? run.id;
+    const group = groups.get(rootId);
+    if (group) group.push(run);
+    else groups.set(rootId, [run]);
+  }
+  const threads: RunThread[] = [];
+  for (const [rootId, members] of groups) {
+    const sorted = [...members].sort((a, b) => a.startedAt - b.startedAt);
+    threads.push({
+      rootId,
+      rootRun: sorted.find((r) => r.id === rootId) ?? sorted[0],
+      latestRun: sorted[sorted.length - 1],
+      replyCount: sorted.length - 1,
+    });
+  }
+  return threads.sort((a, b) => b.latestRun.startedAt - a.latestRun.startedAt);
 }
 
 function Launcher() {
@@ -36,9 +77,13 @@ function Launcher() {
 
   return (
     <div className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-ink">Launch a command</h2>
+      <SectionHeading>Launch a command</SectionHeading>
       <div className="flex flex-wrap items-center gap-2">
-        <select value={command} onChange={(e) => setCommand(e.target.value)} className={inputClass}>
+        <select
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          className={inputClass}
+        >
           {KNOWN_COMMANDS.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -54,19 +99,21 @@ function Launcher() {
         <button
           onClick={handleLaunch}
           disabled={launchRun.isPending}
-          className="rounded-full bg-signal px-3.5 py-1.5 text-sm font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+          className={primaryButtonClass}
         >
           {launchRun.isPending ? "Starting..." : "Launch"}
         </button>
       </div>
       {launchRun.isError && (
-        <p className="mt-2 text-xs text-red-500">{(launchRun.error as Error).message}</p>
+        <p className="mt-2 text-xs text-red-500">
+          {(launchRun.error as Error).message}
+        </p>
       )}
     </div>
   );
 }
 
-function ReplyBox({ runId }: { runId: string }) {
+function ReplyBox({ runId, rootRunId }: { runId: string; rootRunId: string }) {
   const [message, setMessage] = useState("");
   const replyToRun = useReplyToRun();
   const navigate = useNavigate();
@@ -75,7 +122,7 @@ function ReplyBox({ runId }: { runId: string }) {
     if (!message.trim()) return;
     replyToRun.mutate(
       { id: runId, message: message.trim() },
-      { onSuccess: ({ runId: newRunId }) => navigate(`/runs/${newRunId}`) },
+      { onSuccess: () => navigate(`/runs/${rootRunId}`) },
     );
   };
 
@@ -85,8 +132,8 @@ function ReplyBox({ runId }: { runId: string }) {
         Reply to continue this conversation
       </p>
       <p className="mb-2 text-xs text-muted">
-        Some commands pause to ask a question (e.g. "should I proceed?"). Answer here to continue the same
-        session, picking up right where it left off.
+        Some commands pause to ask a question (e.g. "should I proceed?"). Answer
+        here to continue the same session, picking up right where it left off.
       </p>
       <div className="flex gap-2">
         <input
@@ -99,21 +146,65 @@ function ReplyBox({ runId }: { runId: string }) {
         <button
           onClick={handleSend}
           disabled={replyToRun.isPending || !message.trim()}
-          className="rounded-full bg-signal px-3.5 py-1.5 text-sm font-medium text-signal-ink transition-transform hover:bg-signal/90 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+          className={primaryButtonClass}
         >
           {replyToRun.isPending ? "Sending..." : "Send reply"}
         </button>
       </div>
       {replyToRun.isError && (
-        <p className="mt-2 text-xs text-red-500">{(replyToRun.error as Error).message}</p>
+        <p className="mt-2 text-xs text-red-500">
+          {(replyToRun.error as Error).message}
+        </p>
       )}
     </div>
   );
 }
 
-function RunDetail({ runId }: { runId: string }) {
-  const { events, connected, pendingPermissions, respond } = useRunSocket(runId);
-  const runQuery = useRun(runId);
+function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
+  const thread = useMemo(() => {
+    const current = runs.find((r) => r.id === runId);
+    const rootId = current?.threadRootId ?? runId;
+    return runs
+      .filter((r) => (r.threadRootId ?? r.id) === rootId)
+      .sort((a, b) => a.startedAt - b.startedAt);
+  }, [runs, runId]);
+
+  const latestRun = thread[thread.length - 1];
+  const latestRunId = latestRun?.id ?? runId;
+  const rootRunId = thread[0]?.id ?? runId;
+  const historicalRuns = thread.slice(0, -1);
+
+  const {
+    events: liveEvents,
+    connected,
+    pendingPermissions,
+    respond,
+  } = useRunSocket(latestRunId);
+  const historicalLogResults = useRunLogs(historicalRuns.map((r) => r.id));
+
+  const events = useMemo(() => {
+    const merged: RunEvent[] = [];
+    thread.forEach((run, i) => {
+      if (i > 0) {
+        merged.push({
+          type: "thread_reply",
+          message: run.args ?? "",
+          repliedAt: run.startedAt,
+        });
+      }
+      if (run.id === latestRunId) {
+        merged.push(...liveEvents);
+      } else {
+        const historicalIndex = historicalRuns.findIndex(
+          (r) => r.id === run.id,
+        );
+        merged.push(...(historicalLogResults[historicalIndex]?.data ?? []));
+      }
+    });
+    return merged;
+  }, [thread, latestRunId, liveEvents, historicalRuns, historicalLogResults]);
+
+  const runQuery = useRun(latestRunId);
   const stopRun = useStopRun();
   const isRunning = runQuery.data?.status === "running";
   const canReply = !isRunning && Boolean(runQuery.data?.sessionId);
@@ -121,21 +212,32 @@ function RunDetail({ runId }: { runId: string }) {
   return (
     <div className="flex flex-col gap-3 rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ink">
-          Run <span className="font-mono text-xs text-muted">{runId.slice(0, 8)}</span>
-        </h2>
+        <InlineSectionHeading>
+          Run{" "}
+          <span className="font-mono text-xs normal-case text-muted">
+            {rootRunId.slice(0, 8)}
+          </span>
+          {thread.length > 1 && (
+            <span className="normal-case text-muted">
+              {" "}
+              · {thread.length - 1} {thread.length === 2 ? "reply" : "replies"}
+            </span>
+          )}
+        </InlineSectionHeading>
         <div className="flex items-center gap-2">
           <span
             className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
               connected ? "bg-signal/10 text-signal" : "bg-surface-2 text-muted"
             }`}
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-signal" : "bg-muted"}`} />
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-signal" : "bg-muted"}`}
+            />
             {connected ? "live" : "disconnected"}
           </span>
           {isRunning && (
             <button
-              onClick={() => stopRun.mutate(runId)}
+              onClick={() => stopRun.mutate(latestRunId)}
               disabled={stopRun.isPending}
               className="rounded-full bg-red-500 px-3 py-1 text-xs font-medium text-white transition-transform hover:bg-red-600 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -156,7 +258,7 @@ function RunDetail({ runId }: { runId: string }) {
         </div>
       )}
       <RunLogViewer events={events} />
-      {canReply && <ReplyBox runId={runId} />}
+      {canReply && <ReplyBox runId={latestRunId} rootRunId={rootRunId} />}
     </div>
   );
 }
@@ -167,13 +269,13 @@ function Reports() {
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-      <h2 className="mb-3 text-sm font-semibold text-ink">Reports</h2>
+      <SectionHeading>Reports</SectionHeading>
       <QueryState query={reportsQuery}>
         {() =>
           reports.length === 0 ? (
             <p className="text-sm text-muted">
-              Run <code>/html-report</code> above to generate a self-contained HTML tracker dashboard --
-              it'll show up here to open.
+              Run <code>/html-report</code> above to generate a self-contained
+              HTML tracker dashboard -- it'll show up here to open.
             </p>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -185,7 +287,9 @@ function Reports() {
                   rel="noreferrer"
                   className="flex items-center justify-between gap-2 rounded-2xl border border-border/10 px-3 py-2 text-sm transition-colors hover:border-signal/20"
                 >
-                  <span className="font-medium text-ink">{report.filename}</span>
+                  <span className="font-medium text-ink">
+                    {report.filename}
+                  </span>
                   <span className="shrink-0 text-xs text-muted">
                     {new Date(report.modifiedAt).toLocaleString()}
                   </span>
@@ -204,6 +308,10 @@ export default function Runs() {
   const navigate = useNavigate();
   const runsQuery = useRuns();
   const runs = runsQuery.data ?? [];
+  const threads = useMemo(() => groupIntoThreads(runs), [runs]);
+  const activeRootId = runId
+    ? (runs.find((r) => r.id === runId)?.threadRootId ?? runId)
+    : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -212,44 +320,63 @@ export default function Runs() {
         subtitle="Launch Claude Code workflows and watch them stream live, right here."
       />
 
-      <Launcher />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Launcher />
+        <Reports />
+      </div>
 
-      {/* key={runId} forces a full remount per run -- otherwise ReplyBox's
-          draft text and mutation/error state (isPending/isError) would leak
-          across runs when navigating from one run's page straight to another's. */}
-      {runId && <RunDetail key={runId} runId={runId} />}
+      {runId && <RunDetail key={runId} runId={runId} runs={runs} />}
 
       <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-ink">History</h2>
+        <SectionHeading>History</SectionHeading>
         <QueryState query={runsQuery}>
           {() =>
-            runs.length === 0 ? (
+            threads.length === 0 ? (
               <EmptyState
                 title="No runs yet"
                 description="Launch a command above, or use a contextual action from Discovery, Pipeline, or Upskill."
               />
             ) : (
               <div className="flex flex-col gap-1.5">
-                {runs.map((run) => (
+                {threads.map(({ rootId, rootRun, latestRun, replyCount }) => (
                   <button
-                    key={run.id}
-                    onClick={() => navigate(`/runs/${run.id}`)}
+                    key={rootId}
+                    onClick={() => navigate(`/runs/${latestRun.id}`)}
                     className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-sm transition-colors ${
-                      run.id === runId
+                      rootId === activeRootId
                         ? "border-signal/30 bg-signal/[0.06]"
                         : "border-border/10 hover:border-signal/20"
                     }`}
                   >
                     <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className="shrink-0 font-medium text-ink">{run.command}</span>
-                      {run.args && <span className="min-w-0 truncate text-xs text-muted">{run.args}</span>}
+                      <span className="shrink-0 font-medium text-ink">
+                        {rootRun.command}
+                      </span>
+                      {rootRun.args && (
+                        <span className="min-w-0 truncate text-xs text-muted">
+                          {rootRun.args}
+                        </span>
+                      )}
                     </span>
                     <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
-                      {run.status === "running" && <NeutralPill>running</NeutralPill>}
-                      {run.status === "completed" && <NeutralPill>done</NeutralPill>}
-                      {run.status === "error" && <NeutralPill>error</NeutralPill>}
-                      {run.status === "stopped" && <NeutralPill>stopped</NeutralPill>}
-                      {relativeTime(run.startedAt)}
+                      {replyCount > 0 && (
+                        <NeutralPill>
+                          +{replyCount} {replyCount === 1 ? "reply" : "replies"}
+                        </NeutralPill>
+                      )}
+                      {latestRun.status === "running" && (
+                        <NeutralPill>running</NeutralPill>
+                      )}
+                      {latestRun.status === "completed" && (
+                        <NeutralPill>done</NeutralPill>
+                      )}
+                      {latestRun.status === "error" && (
+                        <NeutralPill>error</NeutralPill>
+                      )}
+                      {latestRun.status === "stopped" && (
+                        <NeutralPill>stopped</NeutralPill>
+                      )}
+                      {relativeTime(latestRun.startedAt)}
                     </span>
                   </button>
                 ))}
@@ -258,8 +385,6 @@ export default function Runs() {
           }
         </QueryState>
       </section>
-
-      <Reports />
     </div>
   );
 }

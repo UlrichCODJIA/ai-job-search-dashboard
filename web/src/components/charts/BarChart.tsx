@@ -1,3 +1,5 @@
+import { lighten } from "../../lib/color";
+
 export interface Bar {
   label: string;
   value: number;
@@ -35,7 +37,7 @@ export function HorizontalBarChart({
               className="h-3 rounded-full transition-all duration-300"
               style={{
                 width: `${(b.value / max) * 100}%`,
-                backgroundColor: b.color ?? "#0891b2",
+                background: `linear-gradient(to right, ${b.color ?? "#0891b2"}, ${lighten(b.color ?? "#0891b2")})`,
               }}
             />
           </div>

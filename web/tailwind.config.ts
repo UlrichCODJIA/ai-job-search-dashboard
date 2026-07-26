@@ -12,7 +12,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: cssVar("--color-base"),
         surface: cssVar("--color-surface"),
         "surface-2": cssVar("--color-surface-2"),
         border: cssVar("--color-border"),
@@ -20,12 +19,14 @@ export default {
         muted: cssVar("--color-muted"),
         signal: cssVar("--color-signal"),
         "signal-ink": cssVar("--color-signal-ink"),
+        "accent-2": cssVar("--color-accent-2"),
+        "accent-2-ink": cssVar("--color-accent-2-ink"),
         status: {
-          active: "#0891b2",
+          active: "#F0472B",
           interview: "#f59e0b",
           offer: "#8b5cf6",
           hired: "#22c55e",
-          closed: "#ef4444",
+          closed: "#E11D48",
         },
         fit: {
           strong: "#22c55e",
@@ -36,11 +37,11 @@ export default {
         },
       },
       fontFamily: {
-        // Real reference dashboards (Linear, PostHog, Sentry, QuartRevenue,
-        // InsightStream) all use bold/confident sans for headlines and
-        // numerals, never serif -- a data/control tool reads as utility, not
-        // editorial. Hierarchy comes from weight, size, and tracking instead.
+        // Bold, chunky, geometric display type throughout (not just
+        // headlines) -- self-hosted via @fontsource so this stays a same-
+        // origin asset, never a Google Fonts network call at runtime.
         sans: [
+          "Space Grotesk",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",

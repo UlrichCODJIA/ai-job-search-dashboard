@@ -20,9 +20,9 @@ export function FunnelChart({ stages }: { stages: FunnelStage[] }) {
         return (
           <div key={s.label} className="flex items-center gap-2 text-xs">
             <span className="w-24 shrink-0 truncate text-muted">{s.label}</span>
-            <div className="h-4 flex-1 overflow-hidden rounded bg-surface-2">
+            <div className="h-4 flex-1 overflow-hidden rounded-full bg-surface-2">
               <div
-                className="h-4 rounded bg-signal transition-all duration-300"
+                className="h-4 rounded-full bg-gradient-to-r from-signal to-accent-2 transition-all duration-300"
                 style={{ width: `${pctOfMax}%` }}
               />
             </div>

@@ -1,6 +1,5 @@
+import clsx from "clsx";
 import type { ReactNode } from "react";
-import { useTheme } from "../hooks/useTheme";
-import { shadeForText } from "../lib/color";
 
 export function StatCard({
   label,
@@ -8,25 +7,16 @@ export function StatCard({
   accent,
   hint,
   variant = "default",
+  align = "left",
 }: {
   label: string;
   value: ReactNode;
   accent?: string;
   hint?: string;
-  /** "hero" gives this one card a solid accent fill so it reads as the
-   * featured metric among neutral cards -- the pattern real dashboards
-   * (Health Dashboard's "Patients" card) use for visual hierarchy instead of
-   * making every tile look identical. */
   variant?: "default" | "hero";
+  align?: "left" | "center";
 }) {
-  // A literal hex fallback, not the CSS-var reference: both this and the
-  // default-variant tint below build translucent shades by appending an alpha
-  // suffix to `accent`, which only works for actual hex strings. Brand/status
-  // accents are intentionally theme-constant (like STATUS_COLORS) rather than
-  // flipping with light/dark -- unlike surface/text tokens, a semantic color
-  // should stay recognizable across themes.
   const tint = accent ?? "#0891b2";
-  const { theme } = useTheme();
 
   if (variant === "hero") {
     return (
@@ -49,19 +39,20 @@ export function StatCard({
 
   return (
     <div
-      className="group relative flex h-full flex-col gap-1 overflow-hidden rounded-3xl border px-4 py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
-      style={{ backgroundColor: `${tint}14`, borderColor: `${tint}33` }}
+      className={clsx(
+        "group relative flex h-full flex-col gap-1 overflow-hidden rounded-3xl px-4 py-3.5 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow",
+        align === "center" &&
+          "items-center text-center lg:items-start lg:text-left",
+      )}
+      style={{ backgroundColor: tint }}
     >
-      <span
-        className="text-xs font-semibold uppercase tracking-wide"
-        style={{ color: shadeForText(tint, theme) }}
-      >
+      <span className="text-xs font-semibold uppercase tracking-wide text-white/80">
         {label}
       </span>
-      <span className="text-3xl font-extrabold tracking-tight tabular-nums text-ink">
+      <span className="text-3xl font-extrabold tracking-tight tabular-nums text-white">
         {value}
       </span>
-      {hint && <span className="text-xs text-muted">{hint}</span>}
+      {hint && <span className="text-xs text-white/80">{hint}</span>}
     </div>
   );
 }

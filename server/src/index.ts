@@ -34,13 +34,6 @@ import { runsRoutes } from "./routes/runs.js";
 import { resolveApproval, subscribe, unsubscribe } from "./ws/hub.js";
 
 const PORT = Number(process.env.PORT ?? 4317);
-// Local-only (127.0.0.1) unless HOST is set explicitly -- e.g. to a Tailscale
-// interface IP, so the dashboard is reachable from another of your own devices
-// (a phone) without ever exposing it to the public internet. See dashboard/
-// README.md's "Remote access" section. There's still no authentication (by
-// design, for a single local user), so anything reachable at HOST can launch
-// real Claude Code runs against this repo -- only set this to an address you
-// trust every reachable device on, not 0.0.0.0 on a shared/public network.
 const HOST = process.env.HOST ?? "127.0.0.1";
 
 interface RunSocketData {
@@ -50,12 +43,6 @@ interface RunSocketData {
 const server: Bun.Server<RunSocketData> = Bun.serve({
   port: PORT,
   hostname: HOST,
-  // Defense in depth: an uncaught exception anywhere below (a route that
-  // forgot its own try/catch, same as documents.ts's deleteFileFromDir did
-  // before it was fixed) would otherwise render Bun's development-mode crash
-  // page straight to the client -- full stack trace, absolute repo path,
-  // source snippets. This backstop guarantees a generic response instead,
-  // regardless of what any individual route handler does or doesn't catch.
   development: false,
   error(err) {
     console.error("Unhandled route error:", err);
@@ -70,7 +57,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     "/api/jobs/:key": {
       PATCH: async (req) => {
         const key = decodeURIComponent(req.params.key);
-        const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+        const body = (await req.json().catch(() => null)) as Record<
+          string,
+          unknown
+        > | null;
         if (typeof body !== "object" || body === null || Array.isArray(body)) {
           return errorResponse("invalid JSON body");
         }
@@ -86,9 +76,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     "/api/tracker/:id": {
       PATCH: async (req) => {
         const id = decodeURIComponent(req.params.id);
-        const body = (await req.json().catch(() => null)) as
-          | { status?: string; notes?: string }
-          | null;
+        const body = (await req.json().catch(() => null)) as {
+          status?: string;
+          notes?: string;
+        } | null;
         if (!body) return errorResponse("invalid JSON body");
         if (body.status !== undefined && typeof body.status !== "string") {
           return errorResponse("status must be a string");
@@ -115,7 +106,9 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         try {
           return json(await getSalaryStatus());
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -127,7 +120,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         try {
           return json(await searchSalary(q));
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err), 500);
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+            500,
+          );
         }
       },
     },
@@ -136,41 +132,55 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         try {
           return json(await getSalaryData());
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
     "/api/salary/metadata": {
       PUT: async (req) => {
-        const body = (await req.json().catch(() => null)) as SalaryMetadata | null;
+        const body = (await req
+          .json()
+          .catch(() => null)) as SalaryMetadata | null;
         if (!body) return errorResponse("invalid JSON body");
         try {
           return json(await updateSalaryMetadata(body));
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
     "/api/salary/companies": {
       POST: async (req) => {
-        const body = (await req.json().catch(() => null)) as SalaryCompanyEntry | null;
+        const body = (await req
+          .json()
+          .catch(() => null)) as SalaryCompanyEntry | null;
         if (!body) return errorResponse("invalid JSON body");
         try {
           return json(await upsertSalaryCompany(body), { status: 201 });
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
     "/api/salary/companies/:company": {
       PUT: async (req) => {
         const originalName = decodeURIComponent(req.params.company);
-        const body = (await req.json().catch(() => null)) as SalaryCompanyEntry | null;
+        const body = (await req
+          .json()
+          .catch(() => null)) as SalaryCompanyEntry | null;
         if (!body) return errorResponse("invalid JSON body");
         try {
           return json(await upsertSalaryCompany(body, originalName));
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
       DELETE: async (req) => {
@@ -178,7 +188,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         try {
           return json(await deleteSalaryCompany(company));
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err), 404);
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+            404,
+          );
         }
       },
     },
@@ -188,16 +201,28 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     },
     "/api/profile/section": {
       PATCH: async (req) => {
-        const body = (await req.json().catch(() => null)) as
-          | { file?: string; sectionIndex?: number; content?: string }
-          | null;
-        if (!body?.file || typeof body.sectionIndex !== "number" || typeof body.content !== "string") {
+        const body = (await req.json().catch(() => null)) as {
+          file?: string;
+          sectionIndex?: number;
+          content?: string;
+        } | null;
+        if (
+          !body?.file ||
+          typeof body.sectionIndex !== "number" ||
+          typeof body.content !== "string"
+        ) {
           return errorResponse("body must be { file, sectionIndex, content }");
         }
         try {
-          await updateProfileSection(body.file, body.sectionIndex, body.content);
+          await updateProfileSection(
+            body.file,
+            body.sectionIndex,
+            body.content,
+          );
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
         return json(await getProfileData());
       },
@@ -206,8 +231,11 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     "/api/search-queries": {
       GET: async () => json({ content: await getSearchQueries() }),
       PUT: async (req) => {
-        const body = (await req.json().catch(() => null)) as { content?: string } | null;
-        if (typeof body?.content !== "string") return errorResponse("body must be { content }");
+        const body = (await req.json().catch(() => null)) as {
+          content?: string;
+        } | null;
+        if (typeof body?.content !== "string")
+          return errorResponse("body must be { content }");
         const content = await updateSearchQueries(body.content);
         return json({ content });
       },
@@ -218,18 +246,27 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         try {
           return json(await getSettings());
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
       PUT: async (req) => {
-        const body = (await req.json().catch(() => null)) as { allow?: string[] } | null;
-        if (!Array.isArray(body?.allow) || !body.allow.every((s) => typeof s === "string")) {
+        const body = (await req.json().catch(() => null)) as {
+          allow?: string[];
+        } | null;
+        if (
+          !Array.isArray(body?.allow) ||
+          !body.allow.every((s) => typeof s === "string")
+        ) {
           return errorResponse("body must be { allow: string[] }");
         }
         try {
           return json(await updateSettings(body.allow));
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -241,19 +278,25 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
       POST: async (req) => {
         const folder = decodeURIComponent(req.params.folder);
         if (!isDocumentFolder(folder)) {
-          return errorResponse("folder must be one of: cv, linkedin, diplomas, references, postings");
+          return errorResponse(
+            "folder must be one of: cv, linkedin, diplomas, references, postings",
+          );
         }
         const form = await req.formData().catch(() => null);
         const file = form?.get("file");
-        if (!(file instanceof File)) return errorResponse("multipart field 'file' is required");
+        if (!(file instanceof File))
+          return errorResponse("multipart field 'file' is required");
         const MAX_SIZE = 20 * 1024 * 1024;
-        if (file.size > MAX_SIZE) return errorResponse("file exceeds 20MB limit");
+        if (file.size > MAX_SIZE)
+          return errorResponse("file exceeds 20MB limit");
         const data = new Uint8Array(await file.arrayBuffer());
         try {
           const filename = await saveDocument(folder, file.name, data);
           return json({ folder, filename }, { status: 201 });
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -262,14 +305,18 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         const folder = decodeURIComponent(req.params.folder);
         const filename = decodeURIComponent(req.params.filename);
         if (!isDocumentFolder(folder)) {
-          return errorResponse("folder must be one of: cv, linkedin, diplomas, references, postings");
+          return errorResponse(
+            "folder must be one of: cv, linkedin, diplomas, references, postings",
+          );
         }
         try {
           const deleted = await deleteDocument(folder, filename);
           if (!deleted) return errorResponse("file not found", 404);
           return json({ deleted: true });
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -277,23 +324,29 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     "/api/uploads/:category": {
       GET: async (req) => {
         const category = decodeURIComponent(req.params.category);
-        if (category !== "cover-letter-samples") return errorResponse("unknown upload category");
+        if (category !== "cover-letter-samples")
+          return errorResponse("unknown upload category");
         return json(await listUploads(category));
       },
       POST: async (req) => {
         const category = decodeURIComponent(req.params.category);
-        if (category !== "cover-letter-samples") return errorResponse("unknown upload category");
+        if (category !== "cover-letter-samples")
+          return errorResponse("unknown upload category");
         const form = await req.formData().catch(() => null);
         const file = form?.get("file");
-        if (!(file instanceof File)) return errorResponse("multipart field 'file' is required");
+        if (!(file instanceof File))
+          return errorResponse("multipart field 'file' is required");
         const MAX_SIZE = 20 * 1024 * 1024;
-        if (file.size > MAX_SIZE) return errorResponse("file exceeds 20MB limit");
+        if (file.size > MAX_SIZE)
+          return errorResponse("file exceeds 20MB limit");
         const data = new Uint8Array(await file.arrayBuffer());
         try {
           const filename = await saveUpload(category, file.name, data);
           return json({ category, filename }, { status: 201 });
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -301,13 +354,16 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
       DELETE: async (req) => {
         const category = decodeURIComponent(req.params.category);
         const filename = decodeURIComponent(req.params.filename);
-        if (category !== "cover-letter-samples") return errorResponse("unknown upload category");
+        if (category !== "cover-letter-samples")
+          return errorResponse("unknown upload category");
         try {
           const deleted = await deleteUpload(category, filename);
           if (!deleted) return errorResponse("file not found", 404);
           return json({ deleted: true });
         } catch (err) {
-          return errorResponse(err instanceof Error ? err.message : String(err));
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+          );
         }
       },
     },
@@ -331,28 +387,23 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     ...runsRoutes,
   },
 
-  // Fallback for anything not matched above: the /ws/runs/:id upgrade, then (in
-  // production, after `bun run build`) the built SPA from web/dist with
-  // client-side-routing fallback to index.html. In dev, the Vite dev server serves
-  // the SPA directly and proxies /api + /ws here.
   fetch(req, server) {
     const url = new URL(req.url);
 
     const wsMatch = url.pathname.match(/^\/ws\/runs\/([^/]+)$/);
     if (wsMatch) {
       const runId = decodeURIComponent(wsMatch[1]);
-      // runId is only ever a randomUUID() this server minted itself (runStore.ts),
-      // and hub.ts now builds a filesystem path from it (run log persistence) --
-      // reject anything else here, at the one place this value enters the system,
-      // rather than trusting the %2f-decoded value from an untrusted URL segment.
-      // (matching [^/]+ above against the raw, still-encoded path lets a caller
-      // smuggle "../" past that check as "..%2f", which only decodes to a literal
-      // slash after this match already ran.)
-      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(runId)) {
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          runId,
+        )
+      ) {
         return new Response("invalid run id", { status: 400 });
       }
       const upgraded = server.upgrade(req, { data: { runId } });
-      return upgraded ? undefined : new Response("WebSocket upgrade failed", { status: 400 });
+      return upgraded
+        ? undefined
+        : new Response("WebSocket upgrade failed", { status: 400 });
     }
 
     if (!existsSync(paths.webDist)) {
@@ -363,10 +414,17 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         { status: 404 },
       );
     }
-    const requested = path.join(paths.webDist, decodeURIComponent(url.pathname));
+    const requested = path.join(
+      paths.webDist,
+      decodeURIComponent(url.pathname),
+    );
     const isRequestedFile =
-      requested.startsWith(paths.webDist) && existsSync(requested) && statSync(requested).isFile();
-    const filePath = isRequestedFile ? requested : path.join(paths.webDist, "index.html");
+      requested.startsWith(paths.webDist) &&
+      existsSync(requested) &&
+      statSync(requested).isFile();
+    const filePath = isRequestedFile
+      ? requested
+      : path.join(paths.webDist, "index.html");
     return new Response(Bun.file(filePath));
   },
 
@@ -397,5 +455,7 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
   },
 });
 
-console.log(`AI Job Search dashboard server listening on http://${HOST}:${server.port}`);
+console.log(
+  `AI Job Search dashboard server listening on http://${HOST}:${server.port}`,
+);
 console.log(`Repo root: ${paths.repoRoot}`);

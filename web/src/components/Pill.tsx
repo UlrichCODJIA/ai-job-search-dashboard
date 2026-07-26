@@ -4,14 +4,12 @@ import type { StatusBucket } from "../api/types";
 import { useTheme } from "../hooks/useTheme";
 import { shadeForText } from "../lib/color";
 
-// Active uses the brand signal color (in-flight, like a mission underway);
-// the rest are semantic (caution / distinct / success / closed).
 const STATUS_COLORS: Record<StatusBucket, string> = {
   Active: "#0891b2",
   Interview: "#f59e0b",
   Offer: "#8b5cf6",
   Hired: "#22c55e",
-  "Rejected/Closed": "#ef4444",
+  "Rejected/Closed": "#E11D48",
 };
 
 const FIT_COLORS: Record<string, string> = {
