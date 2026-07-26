@@ -3,7 +3,7 @@
 [![CI](https://github.com/UlrichCODJIA/ai-job-search-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/UlrichCODJIA/ai-job-search-dashboard/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A local, open-source job application tracker and dashboard for [**ai-job-search**](https://github.com/MadsLorentzen/ai-job-search), a Claude Code-powered job application framework. This isn't a fork or a reimplementation of it: it's a companion app (Bun API server + React/TypeScript client) that reads the same files the framework's own slash commands already produce (`seen_jobs.json`, `job_search_tracker.csv`, `upskill/` reports, `salary_data.json`, your profile skill files) and renders them as a proper UI, and it can launch those same commands directly and stream their output live instead of you running them one at a time in a terminal.
+A local, open-source job application tracker and dashboard for [**ai-job-search**](https://github.com/MadsLorentzen/ai-job-search), a Claude powered job application framework. This isn't a fork or a reimplementation of it: it's a companion app (Bun API server + React/TypeScript client) that reads the same files the framework's own slash commands already produce (`seen_jobs.json`, `job_search_tracker.csv`, `upskill/` reports, `salary_data.json`, your profile skill files) and renders them as a proper UI, and it can launch those same commands directly and stream their output live instead of you running them one at a time in a terminal.f
 
 > **Status**: built while using `ai-job-search` for my own daily job search. Nothing here replaces the framework's workflow files (`.claude/commands/`), this is a viewer and launcher for them.
 
@@ -72,7 +72,7 @@ bun run start   # serves the built SPA + API from one process, one port (4317)
 Open <http://localhost:4317>.
 
 Both modes are entirely local by default, the server binds `127.0.0.1` only
-and nothing here makes network calls on your behalf except the Claude Code
+and nothing here makes network calls on your behalf except the Claude
 runs you explicitly launch (which behave exactly like running `claude`
 yourself). See "Remote access" below to reach it from another device.
 
@@ -80,7 +80,7 @@ yourself). See "Remote access" below to reach it from another device.
 
 The dashboard has **no login of its own** (by design, for a single local
 user), anything that can reach it can view your job search data and launch
-real Claude Code runs against your checkout. Don't expose it to the public
+real Claude runs against your checkout. Don't expose it to the public
 internet. The recommended way to reach it from another of your own devices
 (a phone, away from your home network) is [Tailscale](https://tailscale.com/)
 (free for personal use): it's a private mesh network, so the dashboard is
@@ -166,12 +166,12 @@ features on their own:
 
 ## The launcher
 
-The Runs page uses `@anthropic-ai/claude-agent-sdk` to spawn real Claude Code
+The Runs page uses `@anthropic-ai/claude-agent-sdk` to spawn Claude
 runs against your checkout (same `cwd`, same `.claude/commands` and
 `.claude/skills`) and streams every event back over a WebSocket
 (`/ws/runs/:id`).
 
-Permissions are **not** bypassed. Claude Code's own default safety
+Permissions are **not** bypassed. Claude's own default safety
 classification still applies (it resolves most read-only operations - `Read`,
 `Glob`, safe `Bash` - on its own, same as running `claude` in a terminal).
 Anything that classification decides needs a human decision - `Write`, `Edit`,
@@ -195,7 +195,7 @@ starting cold.
 plain-text question (`/apply`'s "should I proceed with drafting?", `/reset`'s
 typed confirmation, `/setup`'s interactive path). A one-shot request/response
 has no way to answer that on its own - the Runs page's **Reply** box solves it
-by resuming the exact same Claude Code session with your answer as the next
+by resuming the exact same Claude session with your answer as the next
 message, once the current turn settles.
 
 ## Known commands
