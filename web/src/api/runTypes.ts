@@ -13,6 +13,7 @@ export interface RunRecord {
   error?: string;
   pendingApprovals?: number;
   threadRootId?: string;
+  resumeFailed?: boolean;
 }
 
 export type RunEvent =
@@ -66,6 +67,7 @@ export type RunEvent =
   | { type: "run_error"; message: string }
   | { type: "run_stopped" }
   | { type: "permission_channel_broken" }
+  | { type: "resume_failed"; requestedSessionId: string; actualSessionId: string }
   | { type: "sdk_event"; subtype: string; raw: unknown }
   | { type: "thread_reply"; message: string; repliedAt: number };
 

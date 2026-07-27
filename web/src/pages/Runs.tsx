@@ -208,6 +208,7 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
   const stopRun = useStopRun();
   const isRunning = runQuery.data?.status === "running";
   const canReply = !isRunning && Boolean(runQuery.data?.sessionId);
+  const hasResumeFailure = thread.some((r) => r.resumeFailed);
 
   return (
     <div className="flex flex-col gap-3 rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
@@ -225,6 +226,14 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
           )}
         </InlineSectionHeading>
         <div className="flex items-center gap-2">
+          {hasResumeFailure && (
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+              title="A reply in this thread couldn't resume its session and started fresh with no prior context -- see the log for where."
+            >
+              ⚠ resume failed
+            </span>
+          )}
           <span
             className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
               connected ? "bg-signal/10 text-signal" : "bg-surface-2 text-muted"

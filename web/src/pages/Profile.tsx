@@ -405,18 +405,21 @@ function SectionItem({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(section.content);
+  const [editingSection, setEditingSection] = useState(section);
   const updateSection = useUpdateProfileSection();
+  const displayedSection = editing ? editingSection : section;
   const HeadingTag =
-    `h${Math.min(section.level + 1, 6)}` as keyof JSX.IntrinsicElements;
+    `h${Math.min(displayedSection.level + 1, 6)}` as keyof JSX.IntrinsicElements;
 
   const startEditing = () => {
     setDraft(section.content);
+    setEditingSection(section);
     setEditing(true);
   };
 
   const handleSave = () => {
     updateSection.mutate(
-      { file, sectionIndex: index, content: draft },
+      { file, sectionIndex: index, expectedHeading: editingSection.heading, content: draft },
       { onSuccess: () => setEditing(false) },
     );
   };
@@ -426,12 +429,12 @@ function SectionItem({
       <div className="flex items-start justify-between gap-2">
         <HeadingTag
           className={
-            section.level <= 2
+            displayedSection.level <= 2
               ? "mb-1 mt-4 text-base font-bold tracking-tight text-ink"
               : "mb-1 mt-3 text-sm font-semibold text-ink/90"
           }
         >
-          {section.heading}
+          {displayedSection.heading}
         </HeadingTag>
         {!editing && (
           <button

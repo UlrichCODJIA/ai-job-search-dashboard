@@ -18,6 +18,7 @@ export interface RunRecord {
   costUsd?: number;
   error?: string;
   threadRootId?: string;
+  resumeFailed?: boolean;
 }
 
 interface RunStoreFile {

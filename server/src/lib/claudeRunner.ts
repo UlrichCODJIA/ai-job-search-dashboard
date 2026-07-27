@@ -130,7 +130,15 @@ async function runQuery(
     for await (const message of stream) {
       if (message.type === "system" && message.subtype === "init") {
         sessionId = message.session_id;
-        await updateRun(runId, { sessionId });
+        const resumeFailed = Boolean(resumeSessionId && sessionId !== resumeSessionId);
+        await updateRun(runId, { sessionId, ...(resumeFailed ? { resumeFailed: true } : {}) });
+        if (resumeFailed) {
+          emit(runId, {
+            type: "resume_failed",
+            requestedSessionId: resumeSessionId as string,
+            actualSessionId: sessionId,
+          });
+        }
         emit(runId, {
           type: "system_init",
           sessionId,

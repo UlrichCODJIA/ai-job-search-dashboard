@@ -128,9 +128,21 @@ export default function Pipeline() {
 
   const handleSave = () => {
     if (!selected) return;
+    const patch: { status?: string; notes?: string } = {};
+    const expected: { expectedStatus?: string; expectedNotes?: string } = {};
+    if (editStatus !== selected.status) {
+      patch.status = editStatus;
+      expected.expectedStatus = selected.status;
+    }
+    if (editNotes !== selected.notes) {
+      patch.notes = editNotes;
+      expected.expectedNotes = selected.notes;
+    }
+    if (Object.keys(patch).length === 0) return;
+
     const savingId = selected.id;
     updateTrackerRow.mutate(
-      { id: selected.id, patch: { status: editStatus, notes: editNotes } },
+      { id: selected.id, patch, expected },
       {
         onSuccess: (updated) =>
           setSelected((current) =>

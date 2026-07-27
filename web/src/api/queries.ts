@@ -50,7 +50,8 @@ export function useUpdateTrackerRow() {
     mutationFn: (args: {
       id: string;
       patch: { status?: string; notes?: string };
-    }) => api.tracker.update(args.id, args.patch),
+      expected: { expectedStatus?: string; expectedNotes?: string };
+    }) => api.tracker.update(args.id, args.patch, args.expected),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.tracker });
       queryClient.invalidateQueries({ queryKey: queryKeys.applications });
@@ -141,8 +142,10 @@ export function useUpdateProfileSection() {
     mutationFn: (args: {
       file: string;
       sectionIndex: number;
+      expectedHeading: string;
       content: string;
-    }) => api.profile.updateSection(args.file, args.sectionIndex, args.content),
+    }) =>
+      api.profile.updateSection(args.file, args.sectionIndex, args.expectedHeading, args.content),
     onSuccess: (data) => queryClient.setQueryData(queryKeys.profile, data),
   });
 }

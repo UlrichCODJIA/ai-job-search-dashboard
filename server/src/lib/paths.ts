@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 function looksLikeAiJobSearchCheckout(dir: string): boolean {
@@ -27,6 +28,11 @@ function findRepoRoot(): string {
 export const REPO_ROOT = findRepoRoot();
 
 const DASHBOARD_ROOT = path.resolve(import.meta.dir, "..", "..", "..");
+
+const repoRootHash = createHash("sha256")
+  .update(REPO_ROOT)
+  .digest("hex")
+  .slice(0, 16);
 
 export const paths = {
   repoRoot: REPO_ROOT,
@@ -59,4 +65,10 @@ export const paths = {
   runsDir: path.join(DASHBOARD_ROOT, "server", ".runs"),
   runLogsDir: path.join(DASHBOARD_ROOT, "server", ".runs", "logs"),
   uploadsDir: path.join(DASHBOARD_ROOT, "server", ".uploads"),
+  instanceLock: path.join(
+    DASHBOARD_ROOT,
+    "server",
+    ".runs",
+    `instance-${repoRootHash}`,
+  ),
 } as const;

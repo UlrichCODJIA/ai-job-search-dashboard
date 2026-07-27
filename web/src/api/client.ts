@@ -54,10 +54,14 @@ export const api = {
 
   tracker: {
     list: () => request<TrackerRow[]>("/api/tracker"),
-    update: (id: string, patch: { status?: string; notes?: string }) =>
+    update: (
+      id: string,
+      patch: { status?: string; notes?: string },
+      expected: { expectedStatus?: string; expectedNotes?: string },
+    ) =>
       request<TrackerRow>(`/api/tracker/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        body: JSON.stringify(patch),
+        body: JSON.stringify({ ...patch, ...expected }),
       }),
   },
 
@@ -100,10 +104,10 @@ export const api = {
 
   profile: {
     get: () => request<ProfileData>("/api/profile"),
-    updateSection: (file: string, sectionIndex: number, content: string) =>
+    updateSection: (file: string, sectionIndex: number, expectedHeading: string, content: string) =>
       request<ProfileData>("/api/profile/section", {
         method: "PATCH",
-        body: JSON.stringify({ file, sectionIndex, content }),
+        body: JSON.stringify({ file, sectionIndex, expectedHeading, content }),
       }),
   },
 

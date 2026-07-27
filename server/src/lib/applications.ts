@@ -25,6 +25,29 @@ function splitSlug(slug: string): { companySlug: string; roleSlug: string } {
   return { companySlug: companySlug ?? slug, roleSlug: roleParts.join("_") };
 }
 
+export function findTrackerRowForCompany(
+  companySlug: string,
+  trackerRows: TrackerRow[],
+): TrackerRow | null {
+  const normalizedCompany = normalize(companySlug);
+  if (normalizedCompany.length === 0) return null;
+
+  const exactMatch = trackerRows.find(
+    (row) => normalize(row.company ?? "") === normalizedCompany,
+  );
+  if (exactMatch) return exactMatch;
+
+  const substringMatches = trackerRows.filter((row) => {
+    const rowCompany = normalize(row.company ?? "");
+    return (
+      rowCompany.length > 0 &&
+      (rowCompany.includes(normalizedCompany) ||
+        normalizedCompany.includes(rowCompany))
+    );
+  });
+  return substringMatches.length === 1 ? substringMatches[0] : null;
+}
+
 export async function listApplications(): Promise<ApplicationRecord[]> {
   if (!existsSync(paths.applicationsDir)) return [];
   const entries = await readdir(paths.applicationsDir, { withFileTypes: true });
@@ -42,16 +65,7 @@ export async function listApplications(): Promise<ApplicationRecord[]> {
         : null;
 
       const { companySlug, roleSlug } = splitSlug(slug);
-      const normalizedCompany = normalize(companySlug);
-      const trackerRow =
-        trackerRows.find((row) => {
-          const rowCompany = normalize(row.company ?? "");
-          return (
-            rowCompany.length > 0 &&
-            (rowCompany.includes(normalizedCompany) ||
-              normalizedCompany.includes(rowCompany))
-          );
-        }) ?? null;
+      const trackerRow = findTrackerRowForCompany(companySlug, trackerRows);
 
       return {
         slug,

@@ -91,9 +91,24 @@ export async function getProfileData(): Promise<ProfileData> {
   };
 }
 
+export class ProfileSectionConflictError extends Error {
+  constructor(
+    public readonly expectedHeading: string,
+    public readonly actualHeading: string | undefined,
+  ) {
+    super(
+      actualHeading === undefined
+        ? `This section ("${expectedHeading}") no longer exists at that position -- the document changed since you opened it. Reload the page and try again.`
+        : `This section changed since you opened it: expected "${expectedHeading}" but found "${actualHeading}" in its place. Reload the page and try again.`,
+    );
+    this.name = "ProfileSectionConflictError";
+  }
+}
+
 export async function updateProfileSection(
   file: string,
   sectionIndex: number,
+  expectedHeading: string,
   content: string,
 ): Promise<void> {
   const filePath = resolveEditableFile(file);
@@ -106,8 +121,12 @@ export async function updateProfileSection(
     if (sectionIndex < 0 || sectionIndex >= doc.sections.length) {
       throw new Error(`section index ${sectionIndex} out of range for ${file}`);
     }
+    const current = doc.sections[sectionIndex];
+    if (current?.heading !== expectedHeading) {
+      throw new ProfileSectionConflictError(expectedHeading, current?.heading);
+    }
     doc.sections[sectionIndex] = {
-      ...doc.sections[sectionIndex],
+      ...current,
       content: content.trim(),
     };
     const rewritten = stringifyMarkdownDocument(doc);

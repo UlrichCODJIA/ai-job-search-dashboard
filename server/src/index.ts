@@ -12,7 +12,11 @@ import {
 import { errorResponse, json } from "./lib/http.js";
 import { paths } from "./lib/paths.js";
 import { listPortalSkills } from "./lib/portals.js";
-import { getProfileData, updateProfileSection } from "./lib/profile.js";
+import {
+  getProfileData,
+  ProfileSectionConflictError,
+  updateProfileSection,
+} from "./lib/profile.js";
 import { listReports, resolveReportPath } from "./lib/reports.js";
 import {
   deleteSalaryCompany,
@@ -27,18 +31,36 @@ import {
 import { getSearchQueries, updateSearchQueries } from "./lib/searchQueries.js";
 import { getSettings, updateSettings } from "./lib/settings.js";
 import { listScrapedJobs, updateScrapedJob } from "./lib/seenJobs.js";
-import { listTrackerRows, updateTrackerRow } from "./lib/tracker.js";
+import {
+  listTrackerRows,
+  TrackerRowConflictError,
+  updateTrackerRow,
+} from "./lib/tracker.js";
 import { listApplications } from "./lib/applications.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
 import { reconcileOrphanedRuns } from "./lib/runStore.js";
 import { resolveApproval, subscribe, unsubscribe } from "./ws/hub.js";
+import {
+  acquireInstanceLock,
+  AnotherInstanceRunningError,
+} from "./lib/instanceLock.js";
 
 const PORT = Number(process.env.PORT ?? 4317);
 const HOST = process.env.HOST ?? "127.0.0.1";
 
 interface RunSocketData {
   runId: string;
+}
+
+try {
+  await acquireInstanceLock();
+} catch (err) {
+  if (err instanceof AnotherInstanceRunningError) {
+    console.error(`Refusing to start: ${err.message}`);
+    process.exit(1);
+  }
+  throw err;
 }
 
 const orphanedCount = await reconcileOrphanedRuns();
@@ -87,6 +109,8 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         const body = (await req.json().catch(() => null)) as {
           status?: string;
           notes?: string;
+          expectedStatus?: string;
+          expectedNotes?: string;
         } | null;
         if (!body) return errorResponse("invalid JSON body");
         if (body.status !== undefined && typeof body.status !== "string") {
@@ -95,7 +119,31 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         if (body.notes !== undefined && typeof body.notes !== "string") {
           return errorResponse("notes must be a string");
         }
-        const updated = await updateTrackerRow(id, body);
+        if (body.status !== undefined && typeof body.expectedStatus !== "string") {
+          return errorResponse("expectedStatus is required when patching status");
+        }
+        if (body.notes !== undefined && typeof body.expectedNotes !== "string") {
+          return errorResponse("expectedNotes is required when patching notes");
+        }
+        const patch: { status?: string; notes?: string } = {};
+        const expected: { status?: string; notes?: string } = {};
+        if (body.status !== undefined) {
+          patch.status = body.status;
+          expected.status = body.expectedStatus;
+        }
+        if (body.notes !== undefined) {
+          patch.notes = body.notes;
+          expected.notes = body.expectedNotes;
+        }
+        let updated: Awaited<ReturnType<typeof updateTrackerRow>>;
+        try {
+          updated = await updateTrackerRow(id, expected, patch);
+        } catch (err) {
+          if (err instanceof TrackerRowConflictError) {
+            return errorResponse(err.message, 409);
+          }
+          throw err;
+        }
         if (!updated) return errorResponse("tracker row not found", 404);
         return json(updated);
       },
@@ -212,22 +260,31 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         const body = (await req.json().catch(() => null)) as {
           file?: string;
           sectionIndex?: number;
+          expectedHeading?: string;
           content?: string;
         } | null;
         if (
           !body?.file ||
           typeof body.sectionIndex !== "number" ||
+          !Number.isFinite(body.sectionIndex) ||
+          typeof body.expectedHeading !== "string" ||
           typeof body.content !== "string"
         ) {
-          return errorResponse("body must be { file, sectionIndex, content }");
+          return errorResponse(
+            "body must be { file, sectionIndex, expectedHeading, content }",
+          );
         }
         try {
           await updateProfileSection(
             body.file,
             body.sectionIndex,
+            body.expectedHeading,
             body.content,
           );
         } catch (err) {
+          if (err instanceof ProfileSectionConflictError) {
+            return errorResponse(err.message, 409);
+          }
           return errorResponse(
             err instanceof Error ? err.message : String(err),
           );

@@ -29,6 +29,14 @@ export function RunLogViewer({ events }: { events: RunEvent[] }) {
                 session {event.sessionId.slice(0, 8)} · model {event.model}
               </p>
             );
+          case "resume_failed":
+            return (
+              <p key={i} className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-amber-300">
+                ⚠ Couldn't resume the previous conversation (session {event.requestedSessionId.slice(0, 8)} is no
+                longer resumable) -- continuing in a brand-new session {event.actualSessionId.slice(0, 8)} with no
+                memory of anything above this point. Re-share any context it needs.
+              </p>
+            );
           case "assistant_text":
             return (
               <p key={i} className="whitespace-pre-wrap text-slate-200">

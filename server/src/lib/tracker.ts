@@ -61,24 +61,44 @@ export async function listTrackerRows(): Promise<TrackerRow[]> {
   }));
 }
 
+export class TrackerRowConflictError extends Error {
+  constructor(
+    public readonly field: "status" | "notes",
+    public readonly expected: string,
+    public readonly actual: string,
+  ) {
+    super(
+      `This row's ${field} changed since you opened it (was "${expected}", is now "${actual}"). Reload and try again.`,
+    );
+    this.name = "TrackerRowConflictError";
+  }
+}
+
 export async function updateTrackerRow(
   id: string,
+  expected: Partial<Pick<CsvRow, "status" | "notes">>,
   patch: Partial<Pick<CsvRow, "status" | "notes">>,
 ): Promise<TrackerRow | null> {
   return withFileLock(paths.tracker, async () => {
     const { header, rows } = await readCsvFile(paths.tracker);
     const activeHeader = header.length > 0 ? header : [...TRACKER_HEADER];
 
-    let matched: CsvRow | null = null;
-    const nextRows = rows.map((row, index) => {
-      if (rowId(row, index) !== id) return row;
-      matched = { ...row, ...patch };
-      return matched;
-    });
+    const index = rows.findIndex((row, i) => rowId(row, i) === id);
+    if (index === -1) return null;
+    const current = rows[index];
 
-    if (!matched) return null;
+    for (const field of ["status", "notes"] as const) {
+      if (!(field in expected)) continue;
+      const currentValue = current[field] ?? "";
+      const expectedValue = expected[field] ?? "";
+      if (currentValue !== expectedValue) {
+        throw new TrackerRowConflictError(field, expectedValue, currentValue);
+      }
+    }
+
+    const matched = { ...current, ...patch };
+    const nextRows = rows.map((row, i) => (i === index ? matched : row));
     await writeCsvFileAtomic(paths.tracker, activeHeader, nextRows);
-    const finalRow = matched as CsvRow;
-    return { ...finalRow, id, bucket: bucketForStatus(finalRow.status ?? "") };
+    return { ...matched, id, bucket: bucketForStatus(matched.status ?? "") };
   });
 }
