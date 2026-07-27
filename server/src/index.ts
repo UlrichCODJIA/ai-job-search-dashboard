@@ -31,6 +31,7 @@ import { listTrackerRows, updateTrackerRow } from "./lib/tracker.js";
 import { listApplications } from "./lib/applications.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
+import { reconcileOrphanedRuns } from "./lib/runStore.js";
 import { resolveApproval, subscribe, unsubscribe } from "./ws/hub.js";
 
 const PORT = Number(process.env.PORT ?? 4317);
@@ -38,6 +39,13 @@ const HOST = process.env.HOST ?? "127.0.0.1";
 
 interface RunSocketData {
   runId: string;
+}
+
+const orphanedCount = await reconcileOrphanedRuns();
+if (orphanedCount > 0) {
+  console.log(
+    `Marked ${orphanedCount} run(s) as errored: still "running" at startup, so left over from a server process that didn't shut down cleanly.`,
+  );
 }
 
 const server: Bun.Server<RunSocketData> = Bun.serve({

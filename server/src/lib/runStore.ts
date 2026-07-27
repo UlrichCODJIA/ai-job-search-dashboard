@@ -86,3 +86,19 @@ export async function setSessionForKey(
     await writeStore(store);
   });
 }
+
+export async function reconcileOrphanedRuns(): Promise<number> {
+  return withFileLock(STORE_PATH, async () => {
+    const store = await readStore();
+    let count = 0;
+    for (const run of store.runs) {
+      if (run.status !== "running") continue;
+      run.status = "error";
+      run.error = "Interrupted: the dashboard server restarted or crashed while this run was still in progress.";
+      run.finishedAt = Date.now();
+      count += 1;
+    }
+    if (count > 0) await writeStore(store);
+    return count;
+  });
+}
