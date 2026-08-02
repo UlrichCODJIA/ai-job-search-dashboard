@@ -1,4 +1,5 @@
 import type { ScrapedJob, TrackerRow } from "../api/types";
+import { resolveDisplayBucket } from "./fit";
 
 export interface FunnelStageCount {
   label: string;
@@ -13,7 +14,6 @@ const INTERVIEW_OR_BEYOND = new Set([
   "hired",
 ]);
 const OFFER_OR_BEYOND = new Set(["offer", "offer_declined", "hired"]);
-const STRONG_FIT_VERDICTS = new Set(["strong fit", "good fit"]);
 
 function norm(value: string): string {
   return value.trim().toLowerCase();
@@ -51,11 +51,7 @@ export function promisingUnappliedJobs(
   return jobs.filter((job) => {
     if (job.status === "expired" || job.status === "skipped") return false;
     if (appliedCompanies.has(norm(job.company))) return false;
-    const highFit = job.fit === "high";
-    const strongVerdict = job.rank_verdict
-      ? STRONG_FIT_VERDICTS.has(norm(job.rank_verdict))
-      : false;
-    return highFit || strongVerdict;
+    return resolveDisplayBucket(job) === "high";
   });
 }
 

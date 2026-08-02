@@ -46,10 +46,6 @@ export default function Discovery() {
     [jobs],
   );
   const fitCounts = useMemo(() => {
-    // Excluded (location-vetoed) jobs are deliberately not counted toward
-    // high/medium/low -- a job that fails a hard location deal-breaker isn't
-    // really "a high fit" regardless of its score, and counting it as one
-    // would overstate how many jobs are actually worth looking at.
     const counts = { high: 0, medium: 0, low: 0, excluded: 0 };
     for (const job of jobs) counts[resolveDisplayBucket(job)]++;
     return counts;
