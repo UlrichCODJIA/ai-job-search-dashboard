@@ -21,6 +21,7 @@ const FIT_COLORS: Record<string, string> = {
   "moderate fit": "#f59e0b",
   "weak fit": "#f97316",
   "poor fit": "#ef4444",
+  excluded: "#64748b",
 };
 
 export function Pill({

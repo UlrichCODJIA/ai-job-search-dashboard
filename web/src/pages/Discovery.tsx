@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDismissJob, useJobs, useLaunchRun } from "../api/queries";
@@ -13,13 +14,19 @@ import { SectionHeading } from "../components/layout/SectionHeading";
 import { FIT_COLORS, FitPill, NeutralPill } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
-import { resolveFitBucket } from "../lib/fit";
+import { isPastDeadline, isUrgentDeadline } from "../lib/deadline";
+import { isLocationExcluded, rankSortPriority, resolveDisplayBucket } from "../lib/fit";
 import { companySlug } from "../lib/slug";
 import { inputClass, primaryButtonClass } from "../lib/ui";
 
 const STATUS_OPTIONS = ["all", "new", "ranked", "evaluated", "skipped", "expired"];
-const FIT_OPTIONS = ["all", "high", "medium", "low"];
-const FIT_BUCKET_RANK: Record<"high" | "medium" | "low", number> = { high: 3, medium: 2, low: 1 };
+const FIT_OPTIONS = ["all", "high", "medium", "low", "excluded"];
+const FIT_BUCKET_RANK: Record<"high" | "medium" | "low" | "excluded", number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+  excluded: 0,
+};
 
 export default function Discovery() {
   const jobsQuery = useJobs();
@@ -33,20 +40,31 @@ export default function Discovery() {
 
   const jobs = jobsQuery.data ?? [];
   const newCount = jobs.filter((j) => j.status === "new").length;
+  const closingSoonCount = useMemo(
+    () =>
+      jobs.filter((j) => !isLocationExcluded(j) && isUrgentDeadline(j.rank_deadline)).length,
+    [jobs],
+  );
   const fitCounts = useMemo(() => {
-    const counts = { high: 0, medium: 0, low: 0 };
-    for (const job of jobs) counts[resolveFitBucket(job)]++;
+    // Excluded (location-vetoed) jobs are deliberately not counted toward
+    // high/medium/low -- a job that fails a hard location deal-breaker isn't
+    // really "a high fit" regardless of its score, and counting it as one
+    // would overstate how many jobs are actually worth looking at.
+    const counts = { high: 0, medium: 0, low: 0, excluded: 0 };
+    for (const job of jobs) counts[resolveDisplayBucket(job)]++;
     return counts;
   }, [jobs]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return jobs.filter((job) => {
-      if (status !== "all" && job.status !== status) return false;
-      if (fit !== "all" && resolveFitBucket(job) !== fit) return false;
-      if (q && !`${job.title} ${job.company}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
+    return jobs
+      .filter((job) => {
+        if (status !== "all" && job.status !== status) return false;
+        if (fit !== "all" && resolveDisplayBucket(job) !== fit) return false;
+        if (q && !`${job.title} ${job.company}`.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => rankSortPriority(b) - rankSortPriority(a));
   }, [jobs, status, fit, search]);
 
   const handleApply = (job: ScrapedJob) => {
@@ -64,8 +82,20 @@ export default function Discovery() {
     {
       key: "fit",
       header: "Fit",
-      render: (job) => <FitPill fit={job.rank_verdict ?? job.fit} />,
-      sortValue: (job) => FIT_BUCKET_RANK[resolveFitBucket(job)],
+      render: (job) => (
+        <div className="flex items-center gap-1.5">
+          <FitPill fit={isLocationExcluded(job) ? "Excluded" : (job.rank_verdict ?? job.fit)} />
+          {!isLocationExcluded(job) && typeof job.rank_score === "number" && (
+            <span
+              className="text-xs font-semibold tabular-nums text-muted"
+              title="Triage score out of 100"
+            >
+              {Math.round(job.rank_score)}
+            </span>
+          )}
+        </div>
+      ),
+      sortValue: (job) => FIT_BUCKET_RANK[resolveDisplayBucket(job)],
     },
     {
       key: "title",
@@ -94,6 +124,29 @@ export default function Discovery() {
       sortValue: (job) => job.company,
     },
     {
+      key: "deadline",
+      header: "Deadline",
+      render: (job) => {
+        if (!job.rank_deadline) return <span className="text-muted">—</span>;
+        const urgent = isUrgentDeadline(job.rank_deadline);
+        const past = isPastDeadline(job.rank_deadline);
+        return (
+          <span
+            className={clsx(
+              "inline-flex items-center gap-1",
+              urgent && "font-semibold text-red-500",
+              past && "text-muted line-through",
+            )}
+          >
+            {urgent && "🔥"}
+            {job.rank_deadline}
+          </span>
+        );
+      },
+      // Missing deadlines sort last regardless of direction.
+      sortValue: (job) => job.rank_deadline ?? "9999-99-99",
+    },
+    {
       key: "status",
       header: "Status",
       render: (job) => <NeutralPill>{job.status}</NeutralPill>,
@@ -113,9 +166,10 @@ export default function Discovery() {
           {Boolean(job.rank_strengths?.length || job.rank_gaps?.length) && (
             <button
               onClick={() => setSelected(job)}
-              className="rounded-full border border-border/15 px-2.5 py-1 text-xs font-medium text-muted transition-transform hover:border-signal/30 hover:text-signal active:scale-[0.97]"
+              title="See the reasoning behind this fit score"
+              className="flex items-center gap-1 rounded-full border border-signal/25 bg-signal/10 px-2.5 py-1 text-xs font-semibold text-signal transition-transform hover:border-signal/40 hover:bg-signal/15 active:scale-[0.97]"
             >
-              Why?
+              <span aria-hidden="true">💡</span> Why?
             </button>
           )}
           {job.status !== "expired" && (
@@ -204,6 +258,24 @@ export default function Discovery() {
                     accent="#f59e0b"
                     align="center"
                   />
+                  {closingSoonCount > 0 && (
+                    <StatCard
+                      label="Closing soon"
+                      value={closingSoonCount}
+                      hint="deadline within 7 days"
+                      accent="#ef4444"
+                      align="center"
+                    />
+                  )}
+                  {fitCounts.excluded > 0 && (
+                    <StatCard
+                      label="Excluded"
+                      value={fitCounts.excluded}
+                      hint="location deal-breaker"
+                      accent={FIT_COLORS.excluded}
+                      align="center"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -246,9 +318,24 @@ export default function Discovery() {
             {selected && (
               <div className="flex flex-col gap-4 text-sm">
                 <div className="flex flex-wrap items-center gap-2">
-                  <FitPill fit={selected.rank_verdict ?? selected.fit} />
+                  <FitPill
+                    fit={isLocationExcluded(selected) ? "Excluded" : (selected.rank_verdict ?? selected.fit)}
+                  />
+                  {!isLocationExcluded(selected) && typeof selected.rank_score === "number" && (
+                    <NeutralPill>{Math.round(selected.rank_score)}/100</NeutralPill>
+                  )}
                   {selected.rank_deadline && (
-                    <NeutralPill>Deadline: {selected.rank_deadline}</NeutralPill>
+                    <span
+                      className={clsx(
+                        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                        isUrgentDeadline(selected.rank_deadline)
+                          ? "bg-red-500/10 text-red-500"
+                          : "bg-surface-2 text-muted",
+                      )}
+                    >
+                      {isUrgentDeadline(selected.rank_deadline) && "🔥"}
+                      Deadline: {selected.rank_deadline}
+                    </span>
                   )}
                   {selected.rank_location === "FAIL" && (
                     <span className="rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-500">
