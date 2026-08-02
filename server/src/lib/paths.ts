@@ -44,6 +44,7 @@ export const paths = {
   salaryData: path.join(REPO_ROOT, "salary_data.json"),
   salaryLookupScript: path.join(REPO_ROOT, "salary_lookup.py"),
   cvDir: path.join(REPO_ROOT, "cv"),
+  cvMainExample: path.join(REPO_ROOT, "cv", "main_example.tex"),
   coverLettersDir: path.join(REPO_ROOT, "cover_letters"),
   profileSkillsDir: path.join(
     REPO_ROOT,

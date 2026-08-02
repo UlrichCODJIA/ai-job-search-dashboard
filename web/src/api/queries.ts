@@ -17,6 +17,7 @@ export const queryKeys = {
   salaryData: ["salary", "data"] as const,
   profile: ["profile"] as const,
   searchQueries: ["searchQueries"] as const,
+  cvTemplate: ["cvTemplate"] as const,
   settings: ["settings"] as const,
   documents: ["documents"] as const,
   uploads: (category: string) => ["uploads", category] as const,
@@ -163,6 +164,21 @@ export function useUpdateSearchQueries() {
     mutationFn: (content: string) => api.searchQueries.update(content),
     onSuccess: (data) =>
       queryClient.setQueryData(queryKeys.searchQueries, data),
+  });
+}
+
+export function useCvTemplate() {
+  return useQuery({
+    queryKey: queryKeys.cvTemplate,
+    queryFn: api.cvTemplate.get,
+  });
+}
+
+export function useUpdateCvTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) => api.cvTemplate.update(content),
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.cvTemplate, data),
   });
 }
 

@@ -120,6 +120,15 @@ export const api = {
       }),
   },
 
+  cvTemplate: {
+    get: () => request<{ content: string }>("/api/cv-template"),
+    update: (content: string) =>
+      request<{ content: string }>("/api/cv-template", {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      }),
+  },
+
   settings: {
     get: () => request<{ allow: string[] }>("/api/settings"),
     update: (allow: string[]) =>

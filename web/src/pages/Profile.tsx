@@ -1,11 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
+  useCvTemplate,
   useDeleteDocument,
   useDocuments,
   useLaunchRun,
   useProfile,
+  useUpdateCvTemplate,
   useUpdateProfileSection,
   useUploadDocument,
   useUploadFile,
@@ -17,12 +19,82 @@ import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
 import { QueryState } from "../components/QueryState";
 import { useConfirm } from "../hooks/useConfirm";
+import { buildSetupHint } from "../lib/setupHint";
 import { outlineButtonClass, primaryButtonClass } from "../lib/ui";
 
 const textareaClass =
   "w-full rounded-2xl border border-border/15 bg-surface px-3.5 py-2.5 font-mono text-xs text-ink focus:border-signal/40 focus:outline-none focus:ring-1 focus:ring-signal/30";
 const selectClass =
   "mt-2 w-full rounded-full border border-border/15 bg-surface px-3 py-1.5 text-xs text-ink focus:border-signal/40 focus:outline-none focus:ring-1 focus:ring-signal/30";
+
+const unreachableFallback = (
+  <p className="text-sm text-red-500">Couldn't reach the dashboard server. Make sure it's running.</p>
+);
+
+function CvTemplateEditor() {
+  const templateQuery = useCvTemplate();
+  const updateTemplate = useUpdateCvTemplate();
+  const [draft, setDraft] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (templateQuery.data && draft === null) setDraft(templateQuery.data.content);
+  }, [templateQuery.data, draft]);
+
+  return (
+    <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
+      <div className="mb-3">
+        <InlineSectionHeading>CV template</InlineSectionHeading>
+        <p className="text-xs text-muted">
+          The master reference <code>/apply</code> tailors every CV from. Edits here save straight to{" "}
+          <code>cv/main_example.tex</code>.
+        </p>
+      </div>
+      <QueryState
+        query={{ isLoading: draft === null, isError: templateQuery.isError }}
+        errorFallback={unreachableFallback}
+      >
+        {() => {
+          const value = draft as string;
+          const isDirty = value !== templateQuery.data?.content;
+
+          return (
+            <>
+              <div className="mb-2 flex items-center justify-end gap-2">
+                {updateTemplate.isError && (
+                  <p className="text-xs text-red-500">{(updateTemplate.error as Error).message}</p>
+                )}
+                {updateTemplate.isSuccess && !isDirty && (
+                  <p className="text-xs text-emerald-500">Saved.</p>
+                )}
+                <button
+                  onClick={() => updateTemplate.mutate(value)}
+                  disabled={!isDirty || updateTemplate.isPending}
+                  className={primaryButtonClass}
+                >
+                  {updateTemplate.isPending ? "Saving..." : "Save"}
+                </button>
+              </div>
+              {value === "" ? (
+                <p className="text-xs text-muted">
+                  No CV template yet. Run <code>/setup</code> to generate one, or upload a resume above and
+                  use "CV from resume".
+                </p>
+              ) : (
+                <textarea
+                  value={value}
+                  onChange={(e) => setDraft(e.target.value)}
+                  rows={22}
+                  className={textareaClass}
+                  spellCheck={false}
+                />
+              )}
+            </>
+          );
+        }}
+      </QueryState>
+    </section>
+  );
+}
 
 const DOCUMENT_FOLDERS = [
   {
@@ -139,10 +211,13 @@ function DocumentUploadCard({
 function ImportDocuments() {
   const launchRun = useLaunchRun();
   const navigate = useNavigate();
+  const profileQuery = useProfile();
+  const documentsQuery = useDocuments();
 
   const runSetup = () => {
+    const args = buildSetupHint(profileQuery.data, documentsQuery.data);
     launchRun.mutate(
-      { command: "/setup" },
+      { command: "/setup", args },
       { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
     );
   };
@@ -558,6 +633,17 @@ export default function Profile() {
             <ImportDocuments />
 
             <GenerateTemplates />
+
+            <CvTemplateEditor />
+
+            <p className="px-1 text-xs text-muted">
+              <code>/setup</code> also generates <code>search-queries.md</code> - the file that decides
+              what <code>/scrape</code> looks for. It's configured on the{" "}
+              <Link to="/settings" className="font-medium text-signal hover:underline">
+                Settings
+              </Link>{" "}
+              page, alongside your other search configuration.
+            </p>
 
             <section className="rounded-3xl border border-border/10 bg-surface p-5">
               <SectionList

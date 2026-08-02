@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
+import { getCvTemplate, updateCvTemplate } from "./lib/cvTemplate.js";
 import {
   deleteDocument,
   deleteUpload,
@@ -302,6 +303,19 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         if (typeof body?.content !== "string")
           return errorResponse("body must be { content }");
         const content = await updateSearchQueries(body.content);
+        return json({ content });
+      },
+    },
+
+    "/api/cv-template": {
+      GET: async () => json({ content: await getCvTemplate() }),
+      PUT: async (req) => {
+        const body = (await req.json().catch(() => null)) as {
+          content?: string;
+        } | null;
+        if (typeof body?.content !== "string")
+          return errorResponse("body must be { content }");
+        const content = await updateCvTemplate(body.content);
         return json({ content });
       },
     },

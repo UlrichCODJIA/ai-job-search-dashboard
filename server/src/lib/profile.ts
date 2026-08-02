@@ -21,6 +21,13 @@ const SKILL_FILES = [
 const CLAUDE_MD_KEY = "CLAUDE.md";
 const EDITABLE_FILES = new Set<string>([CLAUDE_MD_KEY, ...SKILL_FILES]);
 
+function additionalPlaceholderScanFiles(): { label: string; path: string }[] {
+  return [
+    { label: "cv/main_example.tex", path: paths.cvMainExample },
+    { label: "search-queries.md", path: paths.searchQueries },
+  ];
+}
+
 function resolveEditableFile(file: string): string {
   if (!EDITABLE_FILES.has(file)) {
     throw new Error(`unknown profile file: ${file}`);
@@ -81,6 +88,12 @@ export async function getProfileData(): Promise<ProfileData> {
     const text = await readFile(filePath, "utf-8");
     skillFiles.push({ filename, sections: splitMarkdownSections(text) });
     placeholders.push(...findPlaceholders(filename, text));
+  }
+
+  for (const { label, path: filePath } of additionalPlaceholderScanFiles()) {
+    if (!existsSync(filePath)) continue;
+    const text = await readFile(filePath, "utf-8");
+    placeholders.push(...findPlaceholders(label, text));
   }
 
   return {
