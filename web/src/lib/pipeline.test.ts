@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { promisingUnappliedJobs } from "./pipeline";
+import { daysAgoLabel, isStaleActiveRow, promisingUnappliedJobs, staleActiveRows } from "./pipeline";
 import type { ScrapedJob, TrackerRow } from "../api/types";
 
 function job(overrides: Partial<ScrapedJob> = {}): ScrapedJob {
@@ -122,5 +122,56 @@ describe("promisingUnappliedJobs", () => {
       status: "ranked",
     });
     expect(promisingUnappliedJobs([applied], [trackerRow({ company: "ACME" })])).toEqual([]);
+  });
+});
+
+describe("isStaleActiveRow / staleActiveRows", () => {
+  const oldDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  test("an Active row past the threshold is stale", () => {
+    const row = trackerRow({ bucket: "Active", date: oldDate });
+    expect(isStaleActiveRow(row)).toBe(true);
+  });
+
+  test("an Active row within the threshold is not stale", () => {
+    const row = trackerRow({ bucket: "Active", date: recentDate });
+    expect(isStaleActiveRow(row)).toBe(false);
+  });
+
+  test("a non-Active row is never stale, regardless of age", () => {
+    const row = trackerRow({ bucket: "Interview", date: oldDate });
+    expect(isStaleActiveRow(row)).toBe(false);
+  });
+
+  test("a custom threshold is respected", () => {
+    const row = trackerRow({ bucket: "Active", date: recentDate });
+    expect(isStaleActiveRow(row, 1)).toBe(true);
+  });
+
+  test("staleActiveRows filters using the same rule as isStaleActiveRow (no drift between the two)", () => {
+    const stale = trackerRow({ id: "a", bucket: "Active", date: oldDate });
+    const fresh = trackerRow({ id: "b", bucket: "Active", date: recentDate });
+    const notActive = trackerRow({ id: "c", bucket: "Interview", date: oldDate });
+    expect(staleActiveRows([stale, fresh, notActive])).toEqual([stale]);
+  });
+});
+
+describe("daysAgoLabel", () => {
+  test("null renders as an em dash placeholder", () => {
+    expect(daysAgoLabel(null)).toBe("—");
+  });
+
+  test("0 or negative renders as 'today'", () => {
+    expect(daysAgoLabel(0)).toBe("today");
+    expect(daysAgoLabel(-1)).toBe("today");
+  });
+
+  test("1 is singular", () => {
+    expect(daysAgoLabel(1)).toBe("1 day ago");
+  });
+
+  test("more than 1 is plural", () => {
+    expect(daysAgoLabel(5)).toBe("5 days ago");
   });
 });

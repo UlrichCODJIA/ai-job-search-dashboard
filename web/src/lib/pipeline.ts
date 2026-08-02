@@ -55,13 +55,27 @@ export function promisingUnappliedJobs(
   });
 }
 
+export const STALE_ACTIVE_DAYS_THRESHOLD = 14;
+
+export function isStaleActiveRow(
+  row: TrackerRow,
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
+): boolean {
+  return row.bucket === "Active" && (daysSince(row.date) ?? 0) >= thresholdDays;
+}
+
 export function staleActiveRows(
   rows: TrackerRow[],
-  thresholdDays = 14,
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
 ): TrackerRow[] {
-  return rows.filter(
-    (r) => r.bucket === "Active" && (daysSince(r.date) ?? 0) >= thresholdDays,
-  );
+  return rows.filter((r) => isStaleActiveRow(r, thresholdDays));
+}
+
+export function daysAgoLabel(days: number | null): string {
+  if (days === null) return "—";
+  if (days <= 0) return "today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
 }
 
 export const GROUP_BAR_PALETTE = [

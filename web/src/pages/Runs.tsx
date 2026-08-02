@@ -17,12 +17,19 @@ import {
   InlineSectionHeading,
   SectionHeading,
 } from "../components/layout/SectionHeading";
-import { NeutralPill } from "../components/Pill";
+import { NeutralPill, Pill } from "../components/Pill";
 import { PermissionCard } from "../components/PermissionCard";
 import { QueryState } from "../components/QueryState";
 import { RunLogViewer } from "../components/RunLogViewer";
 import { useRunSocket } from "../hooks/useRunSocket";
 import { inputClass, primaryButtonClass } from "../lib/ui";
+
+const RUN_STATUS_COLORS: Record<string, string> = {
+  running: "#0891b2",
+  completed: "#22c55e",
+  error: "#ef4444",
+  stopped: "#64748b",
+};
 
 function relativeTime(ms: number): string {
   const diff = Date.now() - ms;
@@ -374,16 +381,16 @@ export default function Runs() {
                         </NeutralPill>
                       )}
                       {latestRun.status === "running" && (
-                        <NeutralPill>running</NeutralPill>
+                        <Pill color={RUN_STATUS_COLORS.running}>running</Pill>
                       )}
                       {latestRun.status === "completed" && (
-                        <NeutralPill>done</NeutralPill>
+                        <Pill color={RUN_STATUS_COLORS.completed}>done</Pill>
                       )}
                       {latestRun.status === "error" && (
-                        <NeutralPill>error</NeutralPill>
+                        <Pill color={RUN_STATUS_COLORS.error}>error</Pill>
                       )}
                       {latestRun.status === "stopped" && (
-                        <NeutralPill>stopped</NeutralPill>
+                        <Pill color={RUN_STATUS_COLORS.stopped}>stopped</Pill>
                       )}
                       {relativeTime(latestRun.startedAt)}
                     </span>

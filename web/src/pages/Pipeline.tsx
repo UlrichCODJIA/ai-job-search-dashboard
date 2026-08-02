@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -17,7 +18,8 @@ import { SectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
 import { NeutralPill, STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
-import { groupCount } from "../lib/pipeline";
+import { findMatchingApplication } from "../lib/applicationMatch";
+import { daysAgoLabel, daysSince, groupCount, isStaleActiveRow } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import {
   inputClass,
@@ -53,10 +55,6 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
       <p className="font-medium text-ink">{value || "N/A"}</p>
     </div>
   );
-}
-
-function normalizeCompany(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 export default function Pipeline() {
@@ -106,13 +104,9 @@ export default function Pipeline() {
 
   const matchedApplication = useMemo(() => {
     if (!selected) return null;
-    const selectedCompany = normalizeCompany(selected.company);
     return (
       applications.find((app) => app.trackerRow?.id === selected.id) ??
-      applications.find((app) =>
-        normalizeCompany(app.companySlug).includes(selectedCompany),
-      ) ??
-      null
+      findMatchingApplication(applications, selected.company)
     );
   }, [applications, selected]);
 
@@ -211,28 +205,38 @@ export default function Pipeline() {
                           No applications here yet
                         </p>
                       ) : (
-                        rows.map((row) => (
-                          <button
-                            key={row.id}
-                            onClick={() => setSelected(row)}
-                            className="shrink-0 rounded-2xl border border-border/10 bg-surface px-3 py-2 text-left text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-signal/25 hover:shadow-glow"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Avatar name={row.company} />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate font-medium text-ink">
-                                  {row.company}
-                                </p>
-                                <p className="truncate text-xs text-muted">
-                                  {row.role}
-                                </p>
+                        rows.map((row) => {
+                          const stale = isStaleActiveRow(row);
+                          return (
+                            <button
+                              key={row.id}
+                              onClick={() => setSelected(row)}
+                              className="shrink-0 rounded-2xl border border-border/10 bg-surface px-3 py-2 text-left text-sm shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-signal/25 hover:shadow-glow"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Avatar name={row.company} />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-medium text-ink">
+                                    {row.company}
+                                  </p>
+                                  <p className="truncate text-xs text-muted">
+                                    {row.role}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <p className="mt-1.5 text-[11px] text-muted/60">
-                              {row.date}
-                            </p>
-                          </button>
-                        ))
+                              <p
+                                title={row.date}
+                                className={clsx(
+                                  "mt-1.5 text-[11px]",
+                                  stale ? "font-medium text-amber-500" : "text-muted/60",
+                                )}
+                              >
+                                {stale && "⚠ "}
+                                {daysAgoLabel(daysSince(row.date))}
+                              </p>
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   </div>
