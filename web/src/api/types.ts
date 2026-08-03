@@ -140,10 +140,26 @@ export interface SalaryData {
   companies: SalaryCompanyEntry[];
 }
 
+export type PortalHealthStatus = "ok" | "zero_results" | "error" | "skipped_disabled";
+
 export interface PortalSkill {
   name: string;
   descriptionPreview: string;
   enabled: boolean;
+  lastChecked?: string;
+  lastResultCount?: number;
+  healthStatus?: PortalHealthStatus;
+}
+
+export type TemplateType = "cv" | "cover_letters";
+
+export interface RegisteredTemplate {
+  name: string;
+  type: TemplateType;
+  engine: string;
+  pageLimit: string;
+  fonts: string;
+  active: boolean;
 }
 
 export interface ReportFile {

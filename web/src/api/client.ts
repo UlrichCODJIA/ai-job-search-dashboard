@@ -3,6 +3,7 @@ import type {
   ApplicationRecord,
   PortalSkill,
   ProfileData,
+  RegisteredTemplate,
   ReportFile,
   SalaryCompanyEntry,
   SalaryData,
@@ -181,6 +182,10 @@ export const api = {
 
   portals: {
     list: () => request<PortalSkill[]>("/api/portals"),
+  },
+
+  templates: {
+    list: () => request<RegisteredTemplate[]>("/api/templates"),
   },
 
   reports: {

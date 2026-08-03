@@ -22,6 +22,7 @@ export const queryKeys = {
   documents: ["documents"] as const,
   uploads: (category: string) => ["uploads", category] as const,
   portals: ["portals"] as const,
+  templates: ["templates"] as const,
   reports: ["reports"] as const,
   runs: ["runs"] as const,
   run: (id: string) => ["runs", id] as const,
@@ -242,6 +243,10 @@ export function useUploadFile() {
 
 export function usePortalSkills() {
   return useQuery({ queryKey: queryKeys.portals, queryFn: api.portals.list });
+}
+
+export function useRegisteredTemplates() {
+  return useQuery({ queryKey: queryKeys.templates, queryFn: api.templates.list });
 }
 
 export function useReports() {

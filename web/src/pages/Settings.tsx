@@ -1,6 +1,8 @@
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 import {
   usePortalSkills,
+  useRegisteredTemplates,
   useSearchQueries,
   useSettings,
   useUpdateSearchQueries,
@@ -190,6 +192,77 @@ function InstalledPortals() {
                       {!portal.enabled && <span className="ml-2 text-xs font-normal text-muted">disabled</span>}
                     </p>
                     <p className="truncate text-xs text-muted">{portal.descriptionPreview}</p>
+                    {portal.enabled && portal.healthStatus && portal.healthStatus !== "skipped_disabled" && (
+                      <p
+                        className={clsx(
+                          "mt-1 text-xs",
+                          portal.healthStatus === "ok"
+                            ? "text-muted"
+                            : "font-medium text-amber-600 dark:text-amber-500",
+                        )}
+                      >
+                        {portal.healthStatus === "ok" &&
+                          `✓ ${portal.lastResultCount ?? 0} result${portal.lastResultCount === 1 ? "" : "s"} last check`}
+                        {portal.healthStatus === "zero_results" &&
+                          "⚠ 0 results last check - worth a look if this repeats"}
+                        {portal.healthStatus === "error" && "⚠ errored last check"}
+                        {portal.lastChecked && ` (${portal.lastChecked})`}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </QueryState>
+    </section>
+  );
+}
+
+function ActiveTemplates() {
+  const templatesQuery = useRegisteredTemplates();
+  const templates = templatesQuery.data ?? [];
+
+  return (
+    <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
+      <InlineSectionHeading>Active templates</InlineSectionHeading>
+      <p className="mb-3 text-xs text-muted">
+        Custom CV / cover letter templates <code>/apply</code> can draft from. Register one with{" "}
+        <code>/add-template</code> from Runs.
+      </p>
+      <QueryState query={templatesQuery} errorFallback={unreachableFallback}>
+        {() =>
+          templates.length === 0 ? (
+            <p className="text-xs text-muted">
+              No custom templates registered — <code>/apply</code> uses the stock templates.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {templates.map((template) => (
+                <li
+                  key={`${template.type}-${template.name}`}
+                  className="flex items-start gap-2.5 rounded-2xl border border-border/10 px-3 py-2"
+                >
+                  <span
+                    className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${template.active ? "bg-signal" : "bg-muted"}`}
+                    title={template.active ? "Active" : "Registered, not active"}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">
+                      {template.name}
+                      {template.active ? (
+                        <span className="ml-2 text-xs font-normal text-muted">active</span>
+                      ) : (
+                        <span className="ml-2 text-xs font-normal text-muted">
+                          registered · switch with <code>/add-template --use {template.name}</code>
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {template.type === "cv" ? "CV" : "Cover letter"} · {template.engine} · {template.pageLimit}
+                      {template.fonts ? ` · ${template.fonts}` : ""}
+                    </p>
                   </div>
                 </li>
               ))}
@@ -212,6 +285,7 @@ export default function Settings() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PermissionsEditor />
         <InstalledPortals />
+        <ActiveTemplates />
       </div>
     </div>
   );

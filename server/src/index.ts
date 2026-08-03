@@ -19,6 +19,7 @@ import {
   updateProfileSection,
 } from "./lib/profile.js";
 import { listReports, resolveReportPath } from "./lib/reports.js";
+import { listRegisteredTemplates } from "./lib/templates.js";
 import {
   deleteSalaryCompany,
   getSalaryData,
@@ -449,6 +450,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
 
     "/api/portals": {
       GET: async () => json(await listPortalSkills()),
+    },
+
+    "/api/templates": {
+      GET: async () => json(await listRegisteredTemplates()),
     },
 
     "/api/reports": {

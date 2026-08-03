@@ -2,10 +2,31 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { paths } from "./paths.js";
 
+export type PortalHealthStatus = "ok" | "zero_results" | "error" | "skipped_disabled";
+
 export interface PortalSkill {
   name: string;
   descriptionPreview: string;
   enabled: boolean;
+  lastChecked?: string;
+  lastResultCount?: number;
+  healthStatus?: PortalHealthStatus;
+}
+
+interface PortalHealthEntry {
+  last_checked?: string;
+  last_result_count?: number;
+  status?: PortalHealthStatus;
+}
+
+async function readPortalHealth(): Promise<Record<string, PortalHealthEntry>> {
+  try {
+    const text = await readFile(paths.portalHealth, "utf-8");
+    const parsed = JSON.parse(text) as { portals?: Record<string, PortalHealthEntry> };
+    return parsed.portals ?? {};
+  } catch {
+    return {};
+  }
 }
 
 function extractFrontmatter(text: string): string | null {
@@ -43,6 +64,7 @@ export async function listPortalSkills(): Promise<PortalSkill[]> {
     return [];
   }
   const dirs = entries.filter((e) => e.isDirectory());
+  const health = await readPortalHealth();
 
   const skills = await Promise.all(
     dirs.map(async (dir): Promise<PortalSkill | null> => {
@@ -57,10 +79,14 @@ export async function listPortalSkills(): Promise<PortalSkill[]> {
       if (!frontmatter) return null;
       const name = extractScalarField(frontmatter, "name") ?? dir.name;
       const enabledRaw = extractScalarField(frontmatter, "enabled");
+      const entry = health[name];
       return {
         name,
         descriptionPreview: extractDescriptionPreview(frontmatter),
         enabled: enabledRaw !== "false",
+        lastChecked: entry?.last_checked,
+        lastResultCount: entry?.last_result_count,
+        healthStatus: entry?.status,
       };
     }),
   );
