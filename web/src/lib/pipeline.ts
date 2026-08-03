@@ -85,6 +85,22 @@ export function staleDraftRows(
   return rows.filter((r) => isStaleDraftRow(r, thresholdDays));
 }
 
+export function isStaleInterviewRow(
+  row: TrackerRow,
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
+): boolean {
+  if (row.bucket !== "Interview") return false;
+  const referenceDate = row.next_interview_date || row.date;
+  return (daysSince(referenceDate) ?? 0) >= thresholdDays;
+}
+
+export function staleInterviewRows(
+  rows: TrackerRow[],
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
+): TrackerRow[] {
+  return rows.filter((r) => isStaleInterviewRow(r, thresholdDays));
+}
+
 export function trackerRowForCompany(
   company: string,
   trackerRows: TrackerRow[],

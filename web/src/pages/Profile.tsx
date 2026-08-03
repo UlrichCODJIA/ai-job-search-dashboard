@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  useApplications,
   useCvTemplate,
   useDeleteDocument,
   useDocuments,
@@ -213,9 +214,10 @@ function ImportDocuments() {
   const navigate = useNavigate();
   const profileQuery = useProfile();
   const documentsQuery = useDocuments();
+  const applicationsQuery = useApplications();
 
   const runSetup = () => {
-    const args = buildSetupHint(profileQuery.data, documentsQuery.data);
+    const args = buildSetupHint(profileQuery.data, documentsQuery.data, applicationsQuery.data);
     launchRun.mutate(
       { command: "/setup", args },
       { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },

@@ -3,10 +3,12 @@ import {
   daysAgoLabel,
   isStaleActiveRow,
   isStaleDraftRow,
+  isStaleInterviewRow,
   isStaleNewJob,
   promisingUnappliedJobs,
   staleActiveRows,
   staleDraftRows,
+  staleInterviewRows,
   trackerRowForCompany,
 } from "./pipeline";
 import type { ScrapedJob, TrackerRow } from "../api/types";
@@ -195,6 +197,59 @@ describe("isStaleDraftRow / staleDraftRows", () => {
     const fresh = trackerRow({ id: "b", bucket: "Drafted", date: recentDate });
     const notDrafted = trackerRow({ id: "c", bucket: "Active", date: oldDate });
     expect(staleDraftRows([stale, fresh, notDrafted])).toEqual([stale]);
+  });
+});
+
+describe("isStaleInterviewRow / staleInterviewRows", () => {
+  const oldDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const futureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  test("an Interview row whose next_interview_date has long passed is stale", () => {
+    const row = trackerRow({ bucket: "Interview", date: oldDate, next_interview_date: oldDate });
+    expect(isStaleInterviewRow(row)).toBe(true);
+  });
+
+  test("an Interview row whose next_interview_date is upcoming is never stale", () => {
+    const row = trackerRow({ bucket: "Interview", date: oldDate, next_interview_date: futureDate });
+    expect(isStaleInterviewRow(row)).toBe(false);
+  });
+
+  test("an Interview row with no next_interview_date falls back to the applied date", () => {
+    const row = trackerRow({ bucket: "Interview", date: oldDate, next_interview_date: undefined });
+    expect(isStaleInterviewRow(row)).toBe(true);
+  });
+
+  test("an Interview row with no next_interview_date and a recent applied date is not stale", () => {
+    const row = trackerRow({ bucket: "Interview", date: recentDate, next_interview_date: undefined });
+    expect(isStaleInterviewRow(row)).toBe(false);
+  });
+
+  test("a non-Interview row is never flagged, even with an old next_interview_date", () => {
+    const row = trackerRow({ bucket: "Active", date: oldDate, next_interview_date: oldDate });
+    expect(isStaleInterviewRow(row)).toBe(false);
+  });
+
+  test("a custom threshold is respected", () => {
+    const row = trackerRow({ bucket: "Interview", date: oldDate, next_interview_date: recentDate });
+    expect(isStaleInterviewRow(row, 1)).toBe(true);
+  });
+
+  test("staleInterviewRows filters using the same rule as isStaleInterviewRow (no drift between the two)", () => {
+    const stale = trackerRow({
+      id: "a",
+      bucket: "Interview",
+      date: oldDate,
+      next_interview_date: oldDate,
+    });
+    const fresh = trackerRow({
+      id: "b",
+      bucket: "Interview",
+      date: oldDate,
+      next_interview_date: futureDate,
+    });
+    const notInterview = trackerRow({ id: "c", bucket: "Active", date: oldDate });
+    expect(staleInterviewRows([stale, fresh, notInterview])).toEqual([stale]);
   });
 });
 

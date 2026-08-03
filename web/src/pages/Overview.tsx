@@ -24,6 +24,7 @@ import {
   promisingUnappliedJobs,
   staleActiveRows,
   staleDraftRows,
+  staleInterviewRows,
 } from "../lib/pipeline";
 
 const BUCKETS: StatusBucket[] = [
@@ -72,7 +73,12 @@ export default function Overview() {
     [jobs, tracker],
   );
   const stale = useMemo(
-    () => [...staleActiveRows(tracker), ...staleDraftRows(tracker)].slice(0, 5),
+    () =>
+      [
+        ...staleActiveRows(tracker),
+        ...staleDraftRows(tracker),
+        ...staleInterviewRows(tracker),
+      ].slice(0, 5),
     [tracker],
   );
   const upcomingInterviews = useMemo(
@@ -259,7 +265,9 @@ export default function Overview() {
                         </Link>{" "}
                         {row.bucket === "Drafted"
                           ? `was drafted ${daysSince(row.date)} days ago and never submitted. Decide whether to send it, or dismiss it.`
-                          : `has had no update in ${daysSince(row.date)} days. Worth a follow-up or recording an outcome.`}
+                          : row.bucket === "Interview"
+                            ? `had an interview that's likely already happened, with no outcome logged - most employers who respond do so within 1-2 weeks, so run /outcome to record what happened either way.`
+                            : `has had no update in ${daysSince(row.date)} days. Worth a follow-up or recording an outcome.`}
                       </span>
                     </li>
                   ))}

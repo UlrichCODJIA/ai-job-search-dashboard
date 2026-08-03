@@ -26,6 +26,7 @@ import {
   groupCount,
   isStaleActiveRow,
   isStaleDraftRow,
+  isStaleInterviewRow,
 } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import {
@@ -215,7 +216,10 @@ export default function Pipeline() {
                         </p>
                       ) : (
                         rows.map((row) => {
-                          const stale = isStaleActiveRow(row) || isStaleDraftRow(row);
+                          const stale =
+                            isStaleActiveRow(row) ||
+                            isStaleDraftRow(row) ||
+                            isStaleInterviewRow(row);
                           const interviewUrgent = isUrgentDeadline(row.next_interview_date);
                           const interviewPast = isPastDeadline(row.next_interview_date);
                           return (
@@ -250,12 +254,14 @@ export default function Pipeline() {
                                   className={clsx(
                                     "mt-1 inline-flex items-center gap-1 text-[11px]",
                                     interviewUrgent && "font-semibold text-red-500",
-                                    interviewPast && "text-muted/60 line-through",
+                                    interviewPast && "font-medium text-amber-500",
                                     !interviewUrgent && !interviewPast && "text-signal",
                                   )}
                                 >
                                   {interviewUrgent && "🔥"}
-                                  Interview {row.next_interview_date}
+                                  {interviewPast
+                                    ? `❓ Interview was ${row.next_interview_date} - log the outcome`
+                                    : `Interview ${row.next_interview_date}`}
                                 </p>
                               )}
                             </button>
