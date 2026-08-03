@@ -11,7 +11,9 @@ export interface ScrapedJob {
   first_seen: string;
   fit: "high" | "medium" | "low" | string;
   status: "new" | "skipped" | "evaluated" | "ranked" | "expired" | string;
+  location?: string | null;
   deadline?: string | null;
+  salary?: string | null;
   highlights?: string[] | null;
   referral_links?: ReferralLinks | null;
   rank_score?: number;

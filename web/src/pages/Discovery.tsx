@@ -122,6 +122,32 @@ export default function Discovery() {
       sortValue: (job) => job.company,
     },
     {
+      key: "location",
+      header: "Location",
+      render: (job) =>
+        job.location ? (
+          <span className="block max-w-[14rem] truncate" title={job.location}>
+            {job.location}
+          </span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
+      sortValue: (job) => job.location ?? "",
+    },
+    {
+      key: "salary",
+      header: "Salary",
+      render: (job) =>
+        job.salary ? (
+          <span className="block max-w-[12rem] truncate" title={job.salary}>
+            {job.salary}
+          </span>
+        ) : (
+          <span className="text-muted">—</span>
+        ),
+      sortValue: (job) => job.salary ?? "",
+    },
+    {
       key: "deadline",
       header: "Deadline",
       render: (job) => {
@@ -337,6 +363,16 @@ export default function Discovery() {
                   />
                   {!isLocationExcluded(selected) && typeof selected.rank_score === "number" && (
                     <NeutralPill>{Math.round(selected.rank_score)}/100</NeutralPill>
+                  )}
+                  {selected.location && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted">
+                      <span aria-hidden="true">📍</span> {selected.location}
+                    </span>
+                  )}
+                  {selected.salary && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted">
+                      <span aria-hidden="true">💰</span> {selected.salary}
+                    </span>
                   )}
                   {resolveEffectiveDeadline(selected) && (
                     <span
