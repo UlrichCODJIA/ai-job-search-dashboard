@@ -5,6 +5,7 @@ import { useTheme } from "../hooks/useTheme";
 import { shadeForText } from "../lib/color";
 
 const STATUS_COLORS: Record<StatusBucket, string> = {
+  Drafted: "#6366f1",
   Active: "#0891b2",
   Interview: "#f59e0b",
   Offer: "#8b5cf6",

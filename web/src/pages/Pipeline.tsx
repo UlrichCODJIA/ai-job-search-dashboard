@@ -19,7 +19,13 @@ import { Markdown } from "../components/Markdown";
 import { NeutralPill, STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { findMatchingApplication } from "../lib/applicationMatch";
-import { daysAgoLabel, daysSince, groupCount, isStaleActiveRow } from "../lib/pipeline";
+import {
+  daysAgoLabel,
+  daysSince,
+  groupCount,
+  isStaleActiveRow,
+  isStaleDraftRow,
+} from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import {
   inputClass,
@@ -29,6 +35,7 @@ import {
 } from "../lib/ui";
 
 const BUCKETS: StatusBucket[] = [
+  "Drafted",
   "Active",
   "Interview",
   "Offer",
@@ -37,6 +44,7 @@ const BUCKETS: StatusBucket[] = [
 ];
 
 const STATUS_OPTIONS = [
+  "drafted",
   "applied",
   "interview",
   "offer",
@@ -165,11 +173,11 @@ export default function Pipeline() {
           <div className="flex flex-col gap-4">
             <PageHeader
               title="Pipeline"
-              subtitle="Your tracked applications, from first submission to outcome."
+              subtitle="Your tracked applications, from first draft to outcome."
             />
             <EmptyState
               title="No applications tracked yet"
-              description="Run /apply on a job posting from Claude Code to start your pipeline. Applications will appear here as a board across five stages."
+              description="Run /apply on a job posting from Claude Code to start your pipeline. Applications will appear here as a board across six stages, starting the moment a draft exists."
             />
           </div>
         ) : (
@@ -179,7 +187,7 @@ export default function Pipeline() {
               subtitle={`${tracker.length} application${tracker.length === 1 ? "" : "s"} tracked.`}
             />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {BUCKETS.map((bucket) => {
                 const rows = rowsByBucket.get(bucket) ?? [];
                 return (
@@ -206,7 +214,7 @@ export default function Pipeline() {
                         </p>
                       ) : (
                         rows.map((row) => {
-                          const stale = isStaleActiveRow(row);
+                          const stale = isStaleActiveRow(row) || isStaleDraftRow(row);
                           return (
                             <button
                               key={row.id}
@@ -263,7 +271,10 @@ export default function Pipeline() {
               {selected && (
                 <div className="flex flex-col gap-4 text-sm">
                   <div className="grid grid-cols-2 gap-3 text-xs">
-                    <Field label="Applied" value={selected.date} />
+                    <Field
+                      label={selected.bucket === "Drafted" ? "Drafted" : "Applied"}
+                      value={selected.date}
+                    />
                     <Field label="Status" value={selected.status} />
                     <Field label="Sector" value={selected.sector} />
                     <Field label="Role type" value={selected.role_type} />
@@ -287,6 +298,8 @@ export default function Pipeline() {
                         )
                       }
                     />
+                    <Field label="CV file" value={selected.cv_file} />
+                    <Field label="Cover letter" value={selected.cover_letter_file} />
                   </div>
 
                   <div className="rounded-2xl border border-border/10 p-3">

@@ -22,9 +22,11 @@ import {
   groupCount,
   promisingUnappliedJobs,
   staleActiveRows,
+  staleDraftRows,
 } from "../lib/pipeline";
 
 const BUCKETS: StatusBucket[] = [
+  "Drafted",
   "Active",
   "Interview",
   "Offer",
@@ -68,7 +70,10 @@ export default function Overview() {
     () => promisingUnappliedJobs(jobs, tracker).slice(0, 5),
     [jobs, tracker],
   );
-  const stale = useMemo(() => staleActiveRows(tracker).slice(0, 5), [tracker]);
+  const stale = useMemo(
+    () => [...staleActiveRows(tracker), ...staleDraftRows(tracker)].slice(0, 5),
+    [tracker],
+  );
 
   const interviewRate =
     funnel[0].value > 0
@@ -117,7 +122,7 @@ export default function Overview() {
             />
           </section>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {BUCKETS.map((bucket) => (
               <StatCard
                 key={bucket}
@@ -230,8 +235,9 @@ export default function Overview() {
                         >
                           {row.role} at {row.company}
                         </Link>{" "}
-                        has had no update in {daysSince(row.date)} days. Worth a
-                        follow-up or recording an outcome.
+                        {row.bucket === "Drafted"
+                          ? `was drafted ${daysSince(row.date)} days ago and never submitted. Decide whether to send it, or dismiss it.`
+                          : `has had no update in ${daysSince(row.date)} days. Worth a follow-up or recording an outcome.`}
                       </span>
                     </li>
                   ))}

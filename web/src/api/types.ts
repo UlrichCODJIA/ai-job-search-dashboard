@@ -27,6 +27,7 @@ export interface ScrapedJob {
 }
 
 export type StatusBucket =
+  | "Drafted"
   | "Active"
   | "Interview"
   | "Offer"

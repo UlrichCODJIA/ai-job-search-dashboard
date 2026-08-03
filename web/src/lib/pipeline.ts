@@ -71,6 +71,29 @@ export function staleActiveRows(
   return rows.filter((r) => isStaleActiveRow(r, thresholdDays));
 }
 
+export function isStaleDraftRow(
+  row: TrackerRow,
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
+): boolean {
+  return row.bucket === "Drafted" && (daysSince(row.date) ?? 0) >= thresholdDays;
+}
+
+export function staleDraftRows(
+  rows: TrackerRow[],
+  thresholdDays = STALE_ACTIVE_DAYS_THRESHOLD,
+): TrackerRow[] {
+  return rows.filter((r) => isStaleDraftRow(r, thresholdDays));
+}
+
+export function trackerRowForCompany(
+  company: string,
+  trackerRows: TrackerRow[],
+): TrackerRow | null {
+  const target = norm(company);
+  if (!target) return null;
+  return trackerRows.find((row) => norm(row.company) === target) ?? null;
+}
+
 export const STALE_NEW_JOB_DAYS_THRESHOLD = 14;
 
 export function isStaleNewJob(

@@ -19,6 +19,7 @@ const TRACKER_HEADER = [
 ] as const;
 
 export type StatusBucket =
+  | "Drafted"
   | "Active"
   | "Interview"
   | "Offer"
@@ -26,6 +27,7 @@ export type StatusBucket =
   | "Rejected/Closed";
 
 const STATUS_BUCKETS: Record<string, StatusBucket> = {
+  drafted: "Drafted",
   applied: "Active",
   interview: "Interview",
   offer: "Offer",

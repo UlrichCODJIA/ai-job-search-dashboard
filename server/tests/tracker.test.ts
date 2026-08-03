@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { bucketForStatus, type StatusBucket } from "../src/lib/tracker.js";
 
 const CASES: [string, StatusBucket][] = [
+  ["drafted", "Drafted"],
   ["applied", "Active"],
   ["interview", "Interview"],
   ["offer", "Offer"],

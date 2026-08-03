@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
   daysAgoLabel,
   isStaleActiveRow,
+  isStaleDraftRow,
   isStaleNewJob,
   promisingUnappliedJobs,
   staleActiveRows,
+  staleDraftRows,
+  trackerRowForCompany,
 } from "./pipeline";
 import type { ScrapedJob, TrackerRow } from "../api/types";
 
@@ -160,6 +163,60 @@ describe("isStaleActiveRow / staleActiveRows", () => {
     const fresh = trackerRow({ id: "b", bucket: "Active", date: recentDate });
     const notActive = trackerRow({ id: "c", bucket: "Interview", date: oldDate });
     expect(staleActiveRows([stale, fresh, notActive])).toEqual([stale]);
+  });
+});
+
+describe("isStaleDraftRow / staleDraftRows", () => {
+  const oldDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  test("a Drafted row past the threshold is stale", () => {
+    const row = trackerRow({ bucket: "Drafted", date: oldDate });
+    expect(isStaleDraftRow(row)).toBe(true);
+  });
+
+  test("a Drafted row within the threshold is not stale", () => {
+    const row = trackerRow({ bucket: "Drafted", date: recentDate });
+    expect(isStaleDraftRow(row)).toBe(false);
+  });
+
+  test("an Active row is never flagged by isStaleDraftRow, even if old -- that's isStaleActiveRow's signal", () => {
+    const row = trackerRow({ bucket: "Active", date: oldDate });
+    expect(isStaleDraftRow(row)).toBe(false);
+  });
+
+  test("a custom threshold is respected", () => {
+    const row = trackerRow({ bucket: "Drafted", date: recentDate });
+    expect(isStaleDraftRow(row, 1)).toBe(true);
+  });
+
+  test("staleDraftRows filters using the same rule as isStaleDraftRow (no drift between the two)", () => {
+    const stale = trackerRow({ id: "a", bucket: "Drafted", date: oldDate });
+    const fresh = trackerRow({ id: "b", bucket: "Drafted", date: recentDate });
+    const notDrafted = trackerRow({ id: "c", bucket: "Active", date: oldDate });
+    expect(staleDraftRows([stale, fresh, notDrafted])).toEqual([stale]);
+  });
+});
+
+describe("trackerRowForCompany", () => {
+  test("finds a row matching the company name exactly", () => {
+    const row = trackerRow({ company: "Acme" });
+    expect(trackerRowForCompany("Acme", [row])).toBe(row);
+  });
+
+  test("matching is case-insensitive", () => {
+    const row = trackerRow({ company: "ACME" });
+    expect(trackerRowForCompany("acme", [row])).toBe(row);
+  });
+
+  test("returns null when no row matches", () => {
+    const row = trackerRow({ company: "Acme" });
+    expect(trackerRowForCompany("Other Co", [row])).toBeNull();
+  });
+
+  test("returns null for an empty company name rather than matching everything", () => {
+    const row = trackerRow({ company: "Acme" });
+    expect(trackerRowForCompany("", [row])).toBeNull();
   });
 });
 

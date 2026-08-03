@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDismissJob, useJobs, useLaunchRun } from "../api/queries";
+import { useDismissJob, useJobs, useLaunchRun, useTracker } from "../api/queries";
 import type { ScrapedJob } from "../api/types";
 import { Avatar } from "../components/Avatar";
 import { Donut } from "../components/charts/Donut";
@@ -11,12 +11,12 @@ import { Drawer } from "../components/Drawer";
 import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
 import { SectionHeading } from "../components/layout/SectionHeading";
-import { FIT_COLORS, FitPill, NeutralPill } from "../components/Pill";
+import { FIT_COLORS, FitPill, NeutralPill, STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
 import { isPastDeadline, isUrgentDeadline, resolveEffectiveDeadline } from "../lib/deadline";
 import { isLocationExcluded, rankSortPriority, resolveDisplayBucket } from "../lib/fit";
-import { daysAgoLabel, daysSince, isStaleNewJob } from "../lib/pipeline";
+import { daysAgoLabel, daysSince, isStaleNewJob, trackerRowForCompany } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import { inputClass, primaryButtonClass } from "../lib/ui";
 
@@ -31,6 +31,7 @@ const FIT_BUCKET_RANK: Record<"high" | "medium" | "low" | "excluded", number> = 
 
 export default function Discovery() {
   const jobsQuery = useJobs();
+  const trackerQuery = useTracker();
   const dismissJob = useDismissJob();
   const launchRun = useLaunchRun();
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function Discovery() {
   const [selected, setSelected] = useState<ScrapedJob | null>(null);
 
   const jobs = jobsQuery.data ?? [];
+  const trackerRows = trackerQuery.data ?? [];
   const newCount = jobs.filter((j) => j.status === "new").length;
   const closingSoonCount = useMemo(
     () =>
@@ -196,42 +198,61 @@ export default function Discovery() {
     {
       key: "actions",
       header: "",
-      render: (job) => (
-        <div className="flex items-center justify-end gap-2">
-          {Boolean(
-            job.rank_strengths?.length ||
-              job.rank_gaps?.length ||
-              job.highlights?.length ||
-              job.referral_links,
-          ) && (
-            <button
-              onClick={() => setSelected(job)}
-              title="See the reasoning behind this fit score"
-              className="flex items-center gap-1 rounded-full border border-signal/25 bg-signal/10 px-2.5 py-1 text-xs font-semibold text-signal transition-transform hover:border-signal/40 hover:bg-signal/15 active:scale-[0.97]"
-            >
-              <span aria-hidden="true">💡</span> Why?
-            </button>
-          )}
-          {job.status !== "expired" && (
-            <button
-              onClick={() => handleApply(job)}
-              disabled={launchRun.isPending}
-              className="rounded-full border border-border/15 px-2.5 py-1 text-xs font-medium text-muted transition-transform hover:border-signal/30 hover:text-signal active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-            >
-              Apply
-            </button>
-          )}
-          {job.status !== "skipped" && job.status !== "expired" && (
-            <button
-              onClick={() => dismissJob.mutate(job.key)}
-              disabled={dismissJob.isPending}
-              className="rounded-full border border-border/15 px-2.5 py-1 text-xs font-medium text-muted transition-transform hover:border-red-500/30 hover:text-red-400 active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
-            >
-              Dismiss
-            </button>
-          )}
-        </div>
-      ),
+      render: (job) => {
+        const trackerMatch = trackerRowForCompany(job.company, trackerRows);
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {Boolean(
+              job.rank_strengths?.length ||
+                job.rank_gaps?.length ||
+                job.highlights?.length ||
+                job.referral_links,
+            ) && (
+              <button
+                onClick={() => setSelected(job)}
+                title="See the reasoning behind this fit score"
+                className="flex items-center gap-1 rounded-full border border-signal/25 bg-signal/10 px-2.5 py-1 text-xs font-semibold text-signal transition-transform hover:border-signal/40 hover:bg-signal/15 active:scale-[0.97]"
+              >
+                <span aria-hidden="true">💡</span> Why?
+              </button>
+            )}
+            {trackerMatch ? (
+              <button
+                onClick={() =>
+                  navigate("/pipeline", { state: { openRowId: trackerMatch.id } })
+                }
+                title={`Already tracked in your pipeline: ${trackerMatch.status}`}
+                className="rounded-full px-2.5 py-1 text-xs font-medium transition-transform active:scale-[0.97]"
+                style={{
+                  backgroundColor: `${STATUS_COLORS[trackerMatch.bucket]}1a`,
+                  color: STATUS_COLORS[trackerMatch.bucket],
+                }}
+              >
+                {trackerMatch.bucket === "Drafted" ? "Drafted" : trackerMatch.status}
+              </button>
+            ) : (
+              job.status !== "expired" && (
+                <button
+                  onClick={() => handleApply(job)}
+                  disabled={launchRun.isPending}
+                  className="rounded-full border border-border/15 px-2.5 py-1 text-xs font-medium text-muted transition-transform hover:border-signal/30 hover:text-signal active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
+                >
+                  Apply
+                </button>
+              )
+            )}
+            {job.status !== "skipped" && job.status !== "expired" && (
+              <button
+                onClick={() => dismissJob.mutate(job.key)}
+                disabled={dismissJob.isPending}
+                className="rounded-full border border-border/15 px-2.5 py-1 text-xs font-medium text-muted transition-transform hover:border-red-500/30 hover:text-red-400 active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        );
+      },
       className: "text-right",
     },
   ];
