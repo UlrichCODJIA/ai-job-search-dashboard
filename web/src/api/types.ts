@@ -50,6 +50,7 @@ export interface TrackerRow {
   cv_file: string;
   cover_letter_file: string;
   source: string;
+  next_interview_date?: string;
   [extra: string]: string | undefined;
 }
 
@@ -66,6 +67,12 @@ export interface OutcomeRecord {
   notes: string;
 }
 
+export interface InterviewPrepFile {
+  stage: string;
+  hasPrepPack: boolean;
+  hasCheatSheet: boolean;
+}
+
 export interface ApplicationRecord {
   slug: string;
   companySlug: string;
@@ -74,6 +81,7 @@ export interface ApplicationRecord {
   hasJobPosting: boolean;
   hasCvDraft: boolean;
   hasCoverLetter: boolean;
+  interviewPrep: InterviewPrepFile[];
   trackerRow: TrackerRow | null;
 }
 

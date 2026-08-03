@@ -16,6 +16,7 @@ const TRACKER_HEADER = [
   "cv_file",
   "cover_letter_file",
   "source",
+  "next_interview_date",
 ] as const;
 
 export type StatusBucket =

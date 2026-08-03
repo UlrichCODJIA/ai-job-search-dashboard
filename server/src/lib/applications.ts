@@ -5,6 +5,12 @@ import { paths } from "./paths.js";
 import { parseOutcomeMarkdown, type OutcomeRecord } from "./outcome.js";
 import { listTrackerRows, type TrackerRow } from "./tracker.js";
 
+export interface InterviewPrepFile {
+  stage: string;
+  hasPrepPack: boolean;
+  hasCheatSheet: boolean;
+}
+
 export interface ApplicationRecord {
   slug: string;
   companySlug: string;
@@ -13,7 +19,26 @@ export interface ApplicationRecord {
   hasJobPosting: boolean;
   hasCvDraft: boolean;
   hasCoverLetter: boolean;
+  interviewPrep: InterviewPrepFile[];
   trackerRow: TrackerRow | null;
+}
+
+const INTERVIEW_PREP_PATTERN = /^interview_prep_(.+)\.md$/;
+const INTERVIEW_CHEATSHEET_PATTERN = /^interview_cheatsheet_(.+)\.md$/;
+
+export function parseInterviewPrepFiles(filenames: string[]): InterviewPrepFile[] {
+  const stages = new Map<string, InterviewPrepFile>();
+  for (const name of filenames) {
+    const prepMatch = name.match(INTERVIEW_PREP_PATTERN);
+    const cheatMatch = name.match(INTERVIEW_CHEATSHEET_PATTERN);
+    const stage = prepMatch?.[1] ?? cheatMatch?.[1];
+    if (!stage) continue;
+    const entry = stages.get(stage) ?? { stage, hasPrepPack: false, hasCheatSheet: false };
+    if (prepMatch) entry.hasPrepPack = true;
+    if (cheatMatch) entry.hasCheatSheet = true;
+    stages.set(stage, entry);
+  }
+  return [...stages.values()];
 }
 
 function normalize(value: string): string {
@@ -66,6 +91,7 @@ export async function listApplications(): Promise<ApplicationRecord[]> {
 
       const { companySlug, roleSlug } = splitSlug(slug);
       const trackerRow = findTrackerRowForCompany(companySlug, trackerRows);
+      const dirFiles = await readdir(dir);
 
       return {
         slug,
@@ -75,6 +101,7 @@ export async function listApplications(): Promise<ApplicationRecord[]> {
         hasJobPosting: existsSync(path.join(dir, "job_posting.md")),
         hasCvDraft: existsSync(path.join(dir, "cv_draft.tex")),
         hasCoverLetter: existsSync(path.join(dir, "cover_letter.tex")),
+        interviewPrep: parseInterviewPrepFiles(dirFiles),
         trackerRow,
       };
     }),

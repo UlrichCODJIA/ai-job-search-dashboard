@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { findTrackerRowForCompany } from "../src/lib/applications.js";
+import { findTrackerRowForCompany, parseInterviewPrepFiles } from "../src/lib/applications.js";
 import type { TrackerRow } from "../src/lib/tracker.js";
 
 function row(company: string, extra: Partial<TrackerRow> = {}): TrackerRow {
@@ -47,5 +47,48 @@ describe("findTrackerRowForCompany", () => {
     const rows = [row("")];
     const result = findTrackerRowForCompany("acme", rows);
     expect(result).toBeNull();
+  });
+});
+
+describe("parseInterviewPrepFiles", () => {
+  test("a prep pack and cheat sheet for the same stage merge into one entry", () => {
+    const result = parseInterviewPrepFiles([
+      "interview_prep_phone_screen.md",
+      "interview_cheatsheet_phone_screen.md",
+    ]);
+    expect(result).toEqual([
+      { stage: "phone_screen", hasPrepPack: true, hasCheatSheet: true },
+    ]);
+  });
+
+  test("a prep pack with no matching cheat sheet reports hasCheatSheet false", () => {
+    const result = parseInterviewPrepFiles(["interview_prep_technical.md"]);
+    expect(result).toEqual([
+      { stage: "technical", hasPrepPack: true, hasCheatSheet: false },
+    ]);
+  });
+
+  test("a cheat sheet with no matching prep pack reports hasPrepPack false", () => {
+    const result = parseInterviewPrepFiles(["interview_cheatsheet_final_round.md"]);
+    expect(result).toEqual([
+      { stage: "final_round", hasPrepPack: false, hasCheatSheet: true },
+    ]);
+  });
+
+  test("multiple stages are kept separate", () => {
+    const result = parseInterviewPrepFiles([
+      "interview_prep_phone_screen.md",
+      "interview_prep_technical.md",
+    ]);
+    expect(result.map((r) => r.stage).sort()).toEqual(["phone_screen", "technical"]);
+  });
+
+  test("unrelated files (job_posting.md, cv_draft.tex, outcome.md) are ignored", () => {
+    const result = parseInterviewPrepFiles(["job_posting.md", "cv_draft.tex", "outcome.md"]);
+    expect(result).toEqual([]);
+  });
+
+  test("an empty directory listing returns an empty array", () => {
+    expect(parseInterviewPrepFiles([])).toEqual([]);
   });
 });

@@ -19,6 +19,7 @@ import { Markdown } from "../components/Markdown";
 import { NeutralPill, STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { findMatchingApplication } from "../lib/applicationMatch";
+import { isPastDeadline, isUrgentDeadline } from "../lib/deadline";
 import {
   daysAgoLabel,
   daysSince,
@@ -215,6 +216,8 @@ export default function Pipeline() {
                       ) : (
                         rows.map((row) => {
                           const stale = isStaleActiveRow(row) || isStaleDraftRow(row);
+                          const interviewUrgent = isUrgentDeadline(row.next_interview_date);
+                          const interviewPast = isPastDeadline(row.next_interview_date);
                           return (
                             <button
                               key={row.id}
@@ -242,6 +245,19 @@ export default function Pipeline() {
                                 {stale && "⚠ "}
                                 {daysAgoLabel(daysSince(row.date))}
                               </p>
+                              {row.next_interview_date && (
+                                <p
+                                  className={clsx(
+                                    "mt-1 inline-flex items-center gap-1 text-[11px]",
+                                    interviewUrgent && "font-semibold text-red-500",
+                                    interviewPast && "text-muted/60 line-through",
+                                    !interviewUrgent && !interviewPast && "text-signal",
+                                  )}
+                                >
+                                  {interviewUrgent && "🔥"}
+                                  Interview {row.next_interview_date}
+                                </p>
+                              )}
                             </button>
                           );
                         })
@@ -300,6 +316,7 @@ export default function Pipeline() {
                     />
                     <Field label="CV file" value={selected.cv_file} />
                     <Field label="Cover letter" value={selected.cover_letter_file} />
+                    <Field label="Next interview" value={selected.next_interview_date} />
                   </div>
 
                   <div className="rounded-2xl border border-border/10 p-3">
@@ -408,6 +425,16 @@ export default function Pipeline() {
                       {matchedApplication.hasCoverLetter && (
                         <NeutralPill>cover_letter.tex</NeutralPill>
                       )}
+                      {matchedApplication.interviewPrep.flatMap((p) => [
+                        p.hasPrepPack && (
+                          <NeutralPill key={`${p.stage}-prep`}>prep: {p.stage}</NeutralPill>
+                        ),
+                        p.hasCheatSheet && (
+                          <NeutralPill key={`${p.stage}-cheat`}>
+                            cheat sheet: {p.stage}
+                          </NeutralPill>
+                        ),
+                      ])}
                     </div>
                   )}
 

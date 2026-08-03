@@ -11,6 +11,7 @@ function app(companySlug: string, overrides: Partial<ApplicationRecord> = {}): A
     hasJobPosting: false,
     hasCvDraft: false,
     hasCoverLetter: false,
+    interviewPrep: [],
     trackerRow: null,
     ...overrides,
   };

@@ -16,6 +16,7 @@ import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
 import { TrendIndicator } from "../components/TrendIndicator";
 import { buildActivityDays } from "../lib/activity";
+import { isUrgentDeadline } from "../lib/deadline";
 import {
   computeFunnel,
   daysSince,
@@ -74,12 +75,17 @@ export default function Overview() {
     () => [...staleActiveRows(tracker), ...staleDraftRows(tracker)].slice(0, 5),
     [tracker],
   );
+  const upcomingInterviews = useMemo(
+    () => tracker.filter((r) => isUrgentDeadline(r.next_interview_date)).slice(0, 5),
+    [tracker],
+  );
 
   const interviewRate =
     funnel[0].value > 0
       ? Math.round((funnel[1].value / funnel[0].value) * 100)
       : 0;
-  const hasAttentionItems = promising.length > 0 || stale.length > 0;
+  const hasAttentionItems =
+    upcomingInterviews.length > 0 || promising.length > 0 || stale.length > 0;
 
   const last7Count = useMemo(
     () => activityDays.slice(-7).reduce((s, d) => s + d.count, 0),
@@ -207,6 +213,22 @@ export default function Overview() {
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2.5">
+                  {upcomingInterviews.map((row) => (
+                    <li key={row.id} className="flex items-start gap-2 text-sm">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                      <span className="text-ink/80">
+                        🔥{" "}
+                        <Link
+                          to="/pipeline"
+                          className="font-medium text-ink hover:text-signal hover:underline"
+                        >
+                          {row.role} at {row.company}
+                        </Link>{" "}
+                        has an interview on {row.next_interview_date} - make sure your
+                        prep is ready.
+                      </span>
+                    </li>
+                  ))}
                   {promising.map((job) => (
                     <li
                       key={job.key}
