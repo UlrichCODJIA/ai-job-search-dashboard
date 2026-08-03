@@ -71,6 +71,15 @@ export function staleActiveRows(
   return rows.filter((r) => isStaleActiveRow(r, thresholdDays));
 }
 
+export const STALE_NEW_JOB_DAYS_THRESHOLD = 14;
+
+export function isStaleNewJob(
+  job: Pick<ScrapedJob, "status" | "first_seen">,
+  thresholdDays = STALE_NEW_JOB_DAYS_THRESHOLD,
+): boolean {
+  return job.status === "new" && (daysSince(job.first_seen) ?? 0) >= thresholdDays;
+}
+
 export function daysAgoLabel(days: number | null): string {
   if (days === null) return "—";
   if (days <= 0) return "today";

@@ -14,8 +14,9 @@ import { SectionHeading } from "../components/layout/SectionHeading";
 import { FIT_COLORS, FitPill, NeutralPill } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
-import { isPastDeadline, isUrgentDeadline } from "../lib/deadline";
+import { isPastDeadline, isUrgentDeadline, resolveEffectiveDeadline } from "../lib/deadline";
 import { isLocationExcluded, rankSortPriority, resolveDisplayBucket } from "../lib/fit";
+import { daysAgoLabel, daysSince, isStaleNewJob } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import { inputClass, primaryButtonClass } from "../lib/ui";
 
@@ -42,7 +43,8 @@ export default function Discovery() {
   const newCount = jobs.filter((j) => j.status === "new").length;
   const closingSoonCount = useMemo(
     () =>
-      jobs.filter((j) => !isLocationExcluded(j) && isUrgentDeadline(j.rank_deadline)).length,
+      jobs.filter((j) => !isLocationExcluded(j) && isUrgentDeadline(resolveEffectiveDeadline(j)))
+        .length,
     [jobs],
   );
   const fitCounts = useMemo(() => {
@@ -123,9 +125,10 @@ export default function Discovery() {
       key: "deadline",
       header: "Deadline",
       render: (job) => {
-        if (!job.rank_deadline) return <span className="text-muted">—</span>;
-        const urgent = isUrgentDeadline(job.rank_deadline);
-        const past = isPastDeadline(job.rank_deadline);
+        const deadline = resolveEffectiveDeadline(job);
+        if (!deadline) return <span className="text-muted">—</span>;
+        const urgent = isUrgentDeadline(deadline);
+        const past = isPastDeadline(deadline);
         return (
           <span
             className={clsx(
@@ -135,12 +138,12 @@ export default function Discovery() {
             )}
           >
             {urgent && "🔥"}
-            {job.rank_deadline}
+            {deadline}
           </span>
         );
       },
       // Missing deadlines sort last regardless of direction.
-      sortValue: (job) => job.rank_deadline ?? "9999-99-99",
+      sortValue: (job) => resolveEffectiveDeadline(job) ?? "9999-99-99",
     },
     {
       key: "status",
@@ -151,7 +154,17 @@ export default function Discovery() {
     {
       key: "first_seen",
       header: "First seen",
-      render: (job) => job.first_seen,
+      render: (job) => {
+        const stale = isStaleNewJob(job);
+        return (
+          <span
+            className={clsx(stale && "font-semibold text-amber-600 dark:text-amber-500")}
+            title={stale ? `First seen ${job.first_seen} — still unranked` : job.first_seen}
+          >
+            {daysAgoLabel(daysSince(job.first_seen))}
+          </span>
+        );
+      },
       sortValue: (job) => job.first_seen,
     },
     {
@@ -159,7 +172,12 @@ export default function Discovery() {
       header: "",
       render: (job) => (
         <div className="flex items-center justify-end gap-2">
-          {Boolean(job.rank_strengths?.length || job.rank_gaps?.length) && (
+          {Boolean(
+            job.rank_strengths?.length ||
+              job.rank_gaps?.length ||
+              job.highlights?.length ||
+              job.referral_links,
+          ) && (
             <button
               onClick={() => setSelected(job)}
               title="See the reasoning behind this fit score"
@@ -320,17 +338,17 @@ export default function Discovery() {
                   {!isLocationExcluded(selected) && typeof selected.rank_score === "number" && (
                     <NeutralPill>{Math.round(selected.rank_score)}/100</NeutralPill>
                   )}
-                  {selected.rank_deadline && (
+                  {resolveEffectiveDeadline(selected) && (
                     <span
                       className={clsx(
                         "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
-                        isUrgentDeadline(selected.rank_deadline)
+                        isUrgentDeadline(resolveEffectiveDeadline(selected))
                           ? "bg-red-500/10 text-red-500"
                           : "bg-surface-2 text-muted",
                       )}
                     >
-                      {isUrgentDeadline(selected.rank_deadline) && "🔥"}
-                      Deadline: {selected.rank_deadline}
+                      {isUrgentDeadline(resolveEffectiveDeadline(selected)) && "🔥"}
+                      Deadline: {resolveEffectiveDeadline(selected)}
                     </span>
                   )}
                   {selected.rank_location === "FAIL" && (
@@ -344,6 +362,21 @@ export default function Discovery() {
                     </span>
                   )}
                 </div>
+                {selected.highlights && selected.highlights.length > 0 && (
+                  <div>
+                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Highlights
+                    </h3>
+                    <ul className="flex flex-col gap-1.5">
+                      {selected.highlights.map((h, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-signal" />
+                          <span className="text-ink/80">{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {selected.rank_strengths && selected.rank_strengths.length > 0 && (
                   <div>
                     <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -370,6 +403,35 @@ export default function Discovery() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+                {selected.referral_links && (
+                  <div>
+                    <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                      Find a contact
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={selected.referral_links.recruiters}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-signal/25 bg-signal/10 px-3 py-1 text-xs font-medium text-signal transition-transform hover:border-signal/40 hover:bg-signal/15 active:scale-[0.97]"
+                      >
+                        <span aria-hidden="true">🔎</span> Recruiters at {selected.company}
+                      </a>
+                      <a
+                        href={selected.referral_links.team_peers}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/15 px-3 py-1 text-xs font-medium text-muted transition-transform hover:border-signal/30 hover:text-signal active:scale-[0.97]"
+                      >
+                        <span aria-hidden="true">🤝</span> Team members to ask for a referral
+                      </a>
+                    </div>
+                    <p className="mt-1.5 text-xs text-muted">
+                      Opens a LinkedIn people search - a warm intro or referral beats a cold
+                      application.
+                    </p>
                   </div>
                 )}
                 {selected.rank_date && (

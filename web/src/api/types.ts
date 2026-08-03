@@ -1,3 +1,8 @@
+export interface ReferralLinks {
+  recruiters: string;
+  team_peers: string;
+}
+
 export interface ScrapedJob {
   key: string;
   title: string;
@@ -6,6 +11,9 @@ export interface ScrapedJob {
   first_seen: string;
   fit: "high" | "medium" | "low" | string;
   status: "new" | "skipped" | "evaluated" | "ranked" | "expired" | string;
+  deadline?: string | null;
+  highlights?: string[] | null;
+  referral_links?: ReferralLinks | null;
   rank_score?: number;
   rank_verdict?: string;
   rank_date?: string;

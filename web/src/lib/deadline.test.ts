@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { daysUntil, isPastDeadline, isUrgentDeadline } from "./deadline";
+import { daysUntil, isPastDeadline, isUrgentDeadline, resolveEffectiveDeadline } from "./deadline";
 
 const NOW = new Date("2026-08-02T15:30:00");
 
@@ -62,5 +62,28 @@ describe("isPastDeadline", () => {
     expect(isPastDeadline(null, NOW)).toBe(false);
     expect(isPastDeadline(undefined, NOW)).toBe(false);
     expect(isPastDeadline("", NOW)).toBe(false);
+  });
+});
+
+describe("resolveEffectiveDeadline", () => {
+  test("prefers /rank's re-checked deadline when present", () => {
+    expect(
+      resolveEffectiveDeadline({ deadline: "2026-08-01", rank_deadline: "2026-08-09" }),
+    ).toBe("2026-08-09");
+  });
+
+  test("falls back to /scrape's original deadline when /rank found nothing new", () => {
+    expect(resolveEffectiveDeadline({ deadline: "2026-08-01", rank_deadline: null })).toBe(
+      "2026-08-01",
+    );
+  });
+
+  test("falls back to /scrape's deadline when the job has never been ranked", () => {
+    expect(resolveEffectiveDeadline({ deadline: "2026-08-01" })).toBe("2026-08-01");
+  });
+
+  test("null when neither source has a deadline", () => {
+    expect(resolveEffectiveDeadline({ deadline: null, rank_deadline: null })).toBeNull();
+    expect(resolveEffectiveDeadline({})).toBeNull();
   });
 });

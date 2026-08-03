@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { daysAgoLabel, isStaleActiveRow, promisingUnappliedJobs, staleActiveRows } from "./pipeline";
+import {
+  daysAgoLabel,
+  isStaleActiveRow,
+  isStaleNewJob,
+  promisingUnappliedJobs,
+  staleActiveRows,
+} from "./pipeline";
 import type { ScrapedJob, TrackerRow } from "../api/types";
 
 function job(overrides: Partial<ScrapedJob> = {}): ScrapedJob {
@@ -154,6 +160,27 @@ describe("isStaleActiveRow / staleActiveRows", () => {
     const fresh = trackerRow({ id: "b", bucket: "Active", date: recentDate });
     const notActive = trackerRow({ id: "c", bucket: "Interview", date: oldDate });
     expect(staleActiveRows([stale, fresh, notActive])).toEqual([stale]);
+  });
+});
+
+describe("isStaleNewJob", () => {
+  const oldDate = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  test("a new job past the threshold is stale", () => {
+    expect(isStaleNewJob(job({ status: "new", first_seen: oldDate }))).toBe(true);
+  });
+
+  test("a new job within the threshold is not stale", () => {
+    expect(isStaleNewJob(job({ status: "new", first_seen: recentDate }))).toBe(false);
+  });
+
+  test("a ranked job is never flagged, regardless of age -- it's already been acted on", () => {
+    expect(isStaleNewJob(job({ status: "ranked", first_seen: oldDate }))).toBe(false);
+  });
+
+  test("a custom threshold is respected", () => {
+    expect(isStaleNewJob(job({ status: "new", first_seen: recentDate }), 1)).toBe(true);
   });
 });
 

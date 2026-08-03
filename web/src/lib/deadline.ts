@@ -24,3 +24,10 @@ export function isPastDeadline(dateStr: string | null | undefined, now?: Date): 
   const days = daysUntil(dateStr, now);
   return days !== null && days < 0;
 }
+
+export function resolveEffectiveDeadline(job: {
+  deadline?: string | null;
+  rank_deadline?: string | null;
+}): string | null {
+  return job.rank_deadline ?? job.deadline ?? null;
+}
