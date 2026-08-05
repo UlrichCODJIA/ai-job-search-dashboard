@@ -73,6 +73,19 @@ export function RunLogViewer({ events }: { events: RunEvent[] }) {
                 {event.approved ? "✓ approved" : "✗ denied"}
               </p>
             );
+          case "question_request":
+            return (
+              <p key={i} className="text-cyan-300">
+                ? waiting for your answer: {event.questions.length}{" "}
+                question{event.questions.length === 1 ? "" : "s"}
+              </p>
+            );
+          case "question_resolved":
+            return (
+              <p key={i} className={event.answered ? "text-emerald-400" : "text-red-400"}>
+                {event.answered ? "✓ answered" : "✗ skipped"}
+              </p>
+            );
           case "run_result":
             return (
               <p key={i} className={event.status === "success" ? "text-emerald-400" : "text-red-400"}>

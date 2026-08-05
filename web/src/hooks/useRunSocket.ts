@@ -6,6 +6,8 @@ export type PendingPermission = Extract<
   { type: "permission_request" }
 >;
 
+export type PendingQuestion = Extract<RunEvent, { type: "question_request" }>;
+
 export function useRunSocket(runId: string | undefined) {
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [connected, setConnected] = useState(false);
@@ -54,6 +56,25 @@ export function useRunSocket(runId: string | undefined) {
     [events, resolvedToolUseIDs],
   );
 
+  const resolvedQuestionToolUseIDs = useMemo(
+    () =>
+      new Set(
+        events
+          .filter((e) => e.type === "question_resolved")
+          .map((e) => e.toolUseID),
+      ),
+    [events],
+  );
+  const pendingQuestions: PendingQuestion[] = useMemo(
+    () =>
+      events.filter(
+        (e): e is PendingQuestion =>
+          e.type === "question_request" &&
+          !resolvedQuestionToolUseIDs.has(e.toolUseID),
+      ),
+    [events, resolvedQuestionToolUseIDs],
+  );
+
   function respond(toolUseID: string, approved: boolean, message?: string) {
     wsRef.current?.send(
       JSON.stringify({
@@ -64,5 +85,24 @@ export function useRunSocket(runId: string | undefined) {
     );
   }
 
-  return { events, connected, pendingPermissions, respond };
+  function answerQuestion(
+    toolUseID: string,
+    answers: Record<string, string | string[]>,
+  ) {
+    wsRef.current?.send(JSON.stringify({ type: "answer_question", toolUseID, answers }));
+  }
+
+  function skipQuestion(toolUseID: string) {
+    wsRef.current?.send(JSON.stringify({ type: "deny", toolUseID }));
+  }
+
+  return {
+    events,
+    connected,
+    pendingPermissions,
+    respond,
+    pendingQuestions,
+    answerQuestion,
+    skipQuestion,
+  };
 }

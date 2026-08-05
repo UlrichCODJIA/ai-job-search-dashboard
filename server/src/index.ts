@@ -42,7 +42,13 @@ import { listApplications } from "./lib/applications.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
 import { reconcileOrphanedRuns } from "./lib/runStore.js";
-import { resolveApproval, subscribe, unsubscribe } from "./ws/hub.js";
+import {
+  resolveApproval,
+  resolveQuestionAnswer,
+  resolveQuestionSkip,
+  subscribe,
+  unsubscribe,
+} from "./ws/hub.js";
 import {
   acquireInstanceLock,
   AnotherInstanceRunningError,
@@ -523,7 +529,12 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
     },
     message(ws, raw) {
       const { runId } = ws.data;
-      let msg: { type?: string; toolUseID?: string; message?: string };
+      let msg: {
+        type?: string;
+        toolUseID?: string;
+        message?: string;
+        answers?: Record<string, string | string[]>;
+      };
       try {
         msg = JSON.parse(String(raw));
       } catch {
@@ -534,6 +545,9 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         resolveApproval(runId, msg.toolUseID, true);
       } else if (msg.type === "deny") {
         resolveApproval(runId, msg.toolUseID, false, msg.message);
+        resolveQuestionSkip(runId, msg.toolUseID, msg.message);
+      } else if (msg.type === "answer_question" && msg.answers) {
+        resolveQuestionAnswer(runId, msg.toolUseID, msg.answers);
       }
     },
   },

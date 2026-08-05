@@ -1,5 +1,18 @@
 export type RunStatus = "running" | "completed" | "error" | "stopped";
 
+export interface AskUserQuestionOption {
+  label: string;
+  description: string;
+  preview?: string;
+}
+
+export interface AskUserQuestionItem {
+  question: string;
+  header: string;
+  options: AskUserQuestionOption[];
+  multiSelect?: boolean;
+}
+
 export interface RunRecord {
   id: string;
   command: string;
@@ -57,6 +70,14 @@ export type RunEvent =
       expiresAt: number;
     }
   | { type: "permission_resolved"; toolUseID: string; approved: boolean }
+  | {
+      type: "question_request";
+      toolUseID: string;
+      questions: AskUserQuestionItem[];
+      agentID?: string;
+      expiresAt: number;
+    }
+  | { type: "question_resolved"; toolUseID: string; answered: boolean }
   | {
       type: "run_result";
       status: "success" | "error";

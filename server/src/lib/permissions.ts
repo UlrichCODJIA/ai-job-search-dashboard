@@ -1,8 +1,29 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { PermissionResult } from "@anthropic-ai/claude-agent-sdk";
-import { emit, requestApproval } from "../ws/hub.js";
+import {
+  emit,
+  requestApproval,
+  requestQuestionAnswer,
+} from "../ws/hub.js";
 import { paths } from "./paths.js";
+
+export interface AskUserQuestionOption {
+  label: string;
+  description: string;
+  preview?: string;
+}
+
+export interface AskUserQuestionItem {
+  question: string;
+  header: string;
+  options: AskUserQuestionOption[];
+  multiSelect?: boolean;
+}
+
+interface AskUserQuestionInput {
+  questions?: AskUserQuestionItem[];
+}
 
 interface AllowRule {
   tool: string;
@@ -79,6 +100,35 @@ export function createPermissionHandler(runId: string) {
     input: Record<string, unknown>,
     options: CanUseToolOptions,
   ): Promise<PermissionResult> {
+    if (toolName === "AskUserQuestion") {
+      const questions = (input as AskUserQuestionInput).questions ?? [];
+
+      emit(runId, {
+        type: "question_request",
+        toolUseID: options.toolUseID,
+        questions,
+        agentID: options.agentID,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
+
+      const decision = await requestQuestionAnswer(runId, options.toolUseID);
+
+      emit(runId, {
+        type: "question_resolved",
+        toolUseID: options.toolUseID,
+        answered: decision.answered,
+      });
+
+      return decision.answered
+        ? { behavior: "allow", updatedInput: { questions, answers: decision.answers } }
+        : {
+            behavior: "deny",
+            message:
+              decision.message ??
+              "Skipped by user in the AI Job Search dashboard.",
+          };
+    }
+
     if (isPreApproved(toolName, input, rules)) {
       emit(runId, {
         type: "tool_auto_approved",

@@ -19,6 +19,7 @@ import {
 } from "../components/layout/SectionHeading";
 import { NeutralPill, Pill } from "../components/Pill";
 import { PermissionCard } from "../components/PermissionCard";
+import { QuestionCard } from "../components/QuestionCard";
 import { QueryState } from "../components/QueryState";
 import { RunLogViewer } from "../components/RunLogViewer";
 import { useRunSocket } from "../hooks/useRunSocket";
@@ -186,6 +187,9 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
     connected,
     pendingPermissions,
     respond,
+    pendingQuestions,
+    answerQuestion,
+    skipQuestion,
   } = useRunSocket(latestRunId);
   const historicalLogResults = useRunLogs(historicalRuns.map((r) => r.id));
 
@@ -262,8 +266,16 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
           )}
         </div>
       </div>
-      {pendingPermissions.length > 0 && (
+      {(pendingQuestions.length > 0 || pendingPermissions.length > 0) && (
         <div className="flex flex-col gap-2">
+          {pendingQuestions.map((q) => (
+            <QuestionCard
+              key={q.toolUseID}
+              question={q}
+              onAnswer={(answers) => answerQuestion(q.toolUseID, answers)}
+              onSkip={() => skipQuestion(q.toolUseID)}
+            />
+          ))}
           {pendingPermissions.map((p) => (
             <PermissionCard
               key={p.toolUseID}

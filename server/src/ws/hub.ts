@@ -13,8 +13,19 @@ export interface ApprovalDecision {
   message?: string;
 }
 
+export interface QuestionDecision {
+  answered: boolean;
+  answers?: Record<string, string | string[]>;
+  message?: string;
+}
+
 interface PendingApproval {
   resolve: (decision: ApprovalDecision) => void;
+  timeout: ReturnType<typeof setTimeout>;
+}
+
+interface PendingQuestion {
+  resolve: (decision: QuestionDecision) => void;
   timeout: ReturnType<typeof setTimeout>;
 }
 
@@ -23,6 +34,7 @@ const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;
 const subscribers = new Map<string, Set<{ send: (data: string) => void }>>();
 const eventLog = new Map<string, RunEvent[]>();
 const pendingApprovals = new Map<string, PendingApproval>();
+const pendingQuestions = new Map<string, PendingQuestion>();
 
 const MAX_CACHED_RUN_LOGS = 50;
 
@@ -157,10 +169,58 @@ export function resolveApproval(
   return true;
 }
 
+export function requestQuestionAnswer(
+  runId: string,
+  toolUseID: string,
+): Promise<QuestionDecision> {
+  return new Promise((resolve) => {
+    const key = `${runId}:${toolUseID}`;
+    const timeout = setTimeout(() => {
+      pendingQuestions.delete(key);
+      resolve({
+        answered: false,
+        message: "Auto-skipped: no response within 5 minutes.",
+      });
+    }, APPROVAL_TIMEOUT_MS);
+    pendingQuestions.set(key, { resolve, timeout });
+  });
+}
+
+export function resolveQuestionAnswer(
+  runId: string,
+  toolUseID: string,
+  answers: Record<string, string | string[]>,
+): boolean {
+  const key = `${runId}:${toolUseID}`;
+  const pending = pendingQuestions.get(key);
+  if (!pending) return false;
+  clearTimeout(pending.timeout);
+  pendingQuestions.delete(key);
+  pending.resolve({ answered: true, answers });
+  return true;
+}
+
+export function resolveQuestionSkip(
+  runId: string,
+  toolUseID: string,
+  message?: string,
+): boolean {
+  const key = `${runId}:${toolUseID}`;
+  const pending = pendingQuestions.get(key);
+  if (!pending) return false;
+  clearTimeout(pending.timeout);
+  pendingQuestions.delete(key);
+  pending.resolve({ answered: false, message });
+  return true;
+}
+
 export function getPendingApprovalCount(runId: string): number {
   const prefix = `${runId}:`;
   let count = 0;
   for (const key of pendingApprovals.keys()) {
+    if (key.startsWith(prefix)) count += 1;
+  }
+  for (const key of pendingQuestions.keys()) {
     if (key.startsWith(prefix)) count += 1;
   }
   return count;
@@ -176,5 +236,11 @@ export function cancelPendingApprovalsForRun(
     clearTimeout(pending.timeout);
     pendingApprovals.delete(key);
     pending.resolve({ approved: false, message });
+  }
+  for (const [key, pending] of pendingQuestions.entries()) {
+    if (!key.startsWith(prefix)) continue;
+    clearTimeout(pending.timeout);
+    pendingQuestions.delete(key);
+    pending.resolve({ answered: false, message });
   }
 }
