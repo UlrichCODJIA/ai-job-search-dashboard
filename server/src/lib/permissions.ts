@@ -58,6 +58,24 @@ function bashCommandMatches(pattern: string, command: string): boolean {
   return command.trim() === pattern.trim();
 }
 
+export function toRepoRelativePath(value: string): string {
+  const normalized = value.replace(/\\/g, "/");
+  const root = paths.repoRoot.replace(/\\/g, "/");
+  return normalized.startsWith(root)
+    ? normalized.slice(root.length).replace(/^\/+/, "")
+    : normalized;
+}
+
+export function pathPatternMatches(
+  pattern: string,
+  relativeValue: string,
+): boolean {
+  if (pattern.endsWith("*")) {
+    return relativeValue.startsWith(pattern.slice(0, -1));
+  }
+  return relativeValue === pattern;
+}
+
 const ALWAYS_SAFE_TOOLS = new Set(["Read", "Glob", "Grep"]);
 const ALWAYS_RELAY_TOOLS = new Set(["WebFetch"]);
 
@@ -76,7 +94,9 @@ function isPreApproved(
       if (bashCommandMatches(rule.pattern, input.command)) return true;
     } else if (
       Object.values(input).some(
-        (v) => typeof v === "string" && v === rule.pattern,
+        (v) =>
+          typeof v === "string" &&
+          pathPatternMatches(rule.pattern!, toRepoRelativePath(v)),
       )
     ) {
       return true;

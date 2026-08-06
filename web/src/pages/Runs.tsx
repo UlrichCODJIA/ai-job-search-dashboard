@@ -18,11 +18,13 @@ import {
   SectionHeading,
 } from "../components/layout/SectionHeading";
 import { NeutralPill, Pill } from "../components/Pill";
+import { AutoGrowTextarea } from "../components/AutoGrowTextarea";
 import { PermissionCard } from "../components/PermissionCard";
 import { QuestionCard } from "../components/QuestionCard";
 import { QueryState } from "../components/QueryState";
 import { RunLogViewer } from "../components/RunLogViewer";
 import { useRunSocket } from "../hooks/useRunSocket";
+import { countRunningAgents } from "../lib/runAgents";
 import { inputClass, primaryButtonClass } from "../lib/ui";
 
 const RUN_STATUS_COLORS: Record<string, string> = {
@@ -98,11 +100,13 @@ function Launcher() {
             </option>
           ))}
         </select>
-        <input
+        <AutoGrowTextarea
           value={args}
-          onChange={(e) => setArgs(e.target.value)}
-          placeholder="Optional arguments (URL, company name, ...)"
-          className={`w-72 flex-1 ${inputClass}`}
+          onChange={setArgs}
+          onSubmit={handleLaunch}
+          placeholder="Optional arguments (URL, company name, ...) -- Shift+Enter for a new line"
+          className="w-72 flex-1 py-1.5"
+          maxRows={4}
         />
         <button
           onClick={handleLaunch}
@@ -144,12 +148,13 @@ function ReplyBox({ runId, rootRunId }: { runId: string; rootRunId: string }) {
         here to continue the same session, picking up right where it left off.
       </p>
       <div className="flex gap-2">
-        <input
+        <AutoGrowTextarea
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Type your reply (e.g. yes, or feedback)..."
-          className={inputClass + " flex-1"}
+          onChange={setMessage}
+          onSubmit={handleSend}
+          placeholder="Type your reply (e.g. yes, or feedback)... -- Shift+Enter for a new line"
+          className="flex-1 py-1.5"
+          maxRows={8}
         />
         <button
           onClick={handleSend}
@@ -220,6 +225,7 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
   const isRunning = runQuery.data?.status === "running";
   const canReply = !isRunning && Boolean(runQuery.data?.sessionId);
   const hasResumeFailure = thread.some((r) => r.resumeFailed);
+  const runningAgentCount = useMemo(() => countRunningAgents(events), [events]);
 
   return (
     <div className="flex flex-col gap-3 rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
@@ -255,6 +261,14 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
             />
             {connected ? "live" : "disconnected"}
           </span>
+          {isRunning && runningAgentCount > 0 && (
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-medium text-signal"
+              title="Subagents Claude spawned to work in parallel (e.g. checking multiple job portals at once) that haven't reported back yet"
+            >
+              ⟳ {runningAgentCount} agent{runningAgentCount === 1 ? "" : "s"} running
+            </span>
+          )}
           {isRunning && (
             <button
               onClick={() => stopRun.mutate(latestRunId)}

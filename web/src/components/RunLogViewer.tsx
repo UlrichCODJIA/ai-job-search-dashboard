@@ -11,6 +11,15 @@ function formatInput(input: unknown): string {
   }
 }
 
+function AgentTag({ agentID }: { agentID?: string }) {
+  if (!agentID) return null;
+  return (
+    <span className="mr-1.5 rounded bg-white/5 px-1 py-px text-[10px] text-violet-400">
+      {agentID}
+    </span>
+  );
+}
+
 export function RunLogViewer({ events }: { events: RunEvent[] }) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -40,19 +49,21 @@ export function RunLogViewer({ events }: { events: RunEvent[] }) {
           case "assistant_text":
             return (
               <p key={i} className="whitespace-pre-wrap text-slate-200">
+                <AgentTag agentID={event.agentID} />
                 {event.text}
               </p>
             );
           case "tool_use":
             return (
               <p key={i} className="text-cyan-400">
-                ▸ {event.toolName}({formatInput(event.input).slice(0, 200)})
+                <AgentTag agentID={event.agentID} />▸ {event.toolName}(
+                {formatInput(event.input).slice(0, 200)})
               </p>
             );
           case "tool_auto_approved":
             return (
               <p key={i} className="text-slate-600">
-                ✓ auto-approved {event.toolName}
+                <AgentTag agentID={event.agentID} />✓ auto-approved {event.toolName}
               </p>
             );
           case "tool_result":
