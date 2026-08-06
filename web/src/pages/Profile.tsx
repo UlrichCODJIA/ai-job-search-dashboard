@@ -19,6 +19,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
 import { QueryState } from "../components/QueryState";
+import { useToast } from "../components/Toast";
 import { useConfirm } from "../hooks/useConfirm";
 import { buildSetupHint } from "../lib/setupHint";
 import { outlineButtonClass, primaryButtonClass } from "../lib/ui";
@@ -484,6 +485,7 @@ function SectionItem({
   const [draft, setDraft] = useState(section.content);
   const [editingSection, setEditingSection] = useState(section);
   const updateSection = useUpdateProfileSection();
+  const { push } = useToast();
   const displayedSection = editing ? editingSection : section;
   const HeadingTag =
     `h${Math.min(displayedSection.level + 1, 6)}` as keyof JSX.IntrinsicElements;
@@ -497,7 +499,14 @@ function SectionItem({
   const handleSave = () => {
     updateSection.mutate(
       { file, sectionIndex: index, expectedHeading: editingSection.heading, content: draft },
-      { onSuccess: () => setEditing(false) },
+      {
+        onSuccess: (data) => {
+          setEditing(false);
+          if (data.warning) {
+            push({ tone: "warning", title: "Saved, but check this", description: data.warning });
+          }
+        },
+      },
     );
   };
 

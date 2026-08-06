@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { appendFile } from "node:fs/promises";
+import { appendFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { paths } from "../lib/paths.js";
 
@@ -224,6 +224,12 @@ export function getPendingApprovalCount(runId: string): number {
     if (key.startsWith(prefix)) count += 1;
   }
   return count;
+}
+
+export async function deleteRunEvents(runId: string): Promise<void> {
+  cancelPendingApprovalsForRun(runId, "Run deleted by user.");
+  eventLog.delete(runId);
+  await rm(logFilePath(runId), { force: true });
 }
 
 export function cancelPendingApprovalsForRun(

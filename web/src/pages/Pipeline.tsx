@@ -16,7 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { PageHeader } from "../components/layout/PageHeader";
 import { SectionHeading } from "../components/layout/SectionHeading";
 import { Markdown } from "../components/Markdown";
-import { NeutralPill, STATUS_COLORS } from "../components/Pill";
+import { STATUS_COLORS } from "../components/Pill";
 import { QueryState } from "../components/QueryState";
 import { findMatchingApplication } from "../lib/applicationMatch";
 import { isPastDeadline, isUrgentDeadline } from "../lib/deadline";
@@ -57,6 +57,30 @@ const STATUS_OPTIONS = [
   "interview_only",
   "withdrawn",
 ];
+
+function DocumentLink({
+  slug,
+  filename,
+  label,
+}: {
+  slug: string;
+  filename: string;
+  label?: string;
+}) {
+  return (
+    <a
+      href={`/api/applications/${encodeURIComponent(slug)}/${encodeURIComponent(filename)}`}
+      target="_blank"
+      rel="noreferrer"
+      download
+      className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition-colors hover:bg-signal/10 hover:text-signal"
+      title={`Download ${filename}`}
+    >
+      <span aria-hidden>⬇</span>
+      {label ?? filename}
+    </a>
+  );
+}
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -423,22 +447,30 @@ export default function Pipeline() {
                   {matchedApplication && (
                     <div className="flex flex-wrap gap-1.5">
                       {matchedApplication.hasJobPosting && (
-                        <NeutralPill>job_posting.md</NeutralPill>
+                        <DocumentLink slug={matchedApplication.slug} filename="job_posting.md" />
                       )}
                       {matchedApplication.hasCvDraft && (
-                        <NeutralPill>cv_draft.tex</NeutralPill>
+                        <DocumentLink slug={matchedApplication.slug} filename="cv_draft.tex" />
                       )}
                       {matchedApplication.hasCoverLetter && (
-                        <NeutralPill>cover_letter.tex</NeutralPill>
+                        <DocumentLink slug={matchedApplication.slug} filename="cover_letter.tex" />
                       )}
                       {matchedApplication.interviewPrep.flatMap((p) => [
                         p.hasPrepPack && (
-                          <NeutralPill key={`${p.stage}-prep`}>prep: {p.stage}</NeutralPill>
+                          <DocumentLink
+                            key={`${p.stage}-prep`}
+                            slug={matchedApplication.slug}
+                            filename={`interview_prep_${p.stage}.md`}
+                            label={`prep: ${p.stage}`}
+                          />
                         ),
                         p.hasCheatSheet && (
-                          <NeutralPill key={`${p.stage}-cheat`}>
-                            cheat sheet: {p.stage}
-                          </NeutralPill>
+                          <DocumentLink
+                            key={`${p.stage}-cheat`}
+                            slug={matchedApplication.slug}
+                            filename={`interview_cheatsheet_${p.stage}.md`}
+                            label={`cheat sheet: ${p.stage}`}
+                          />
                         ),
                       ])}
                     </div>

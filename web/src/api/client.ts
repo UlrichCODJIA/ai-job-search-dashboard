@@ -106,7 +106,7 @@ export const api = {
   profile: {
     get: () => request<ProfileData>("/api/profile"),
     updateSection: (file: string, sectionIndex: number, expectedHeading: string, content: string) =>
-      request<ProfileData>("/api/profile/section", {
+      request<{ profile: ProfileData; warning?: string }>("/api/profile/section", {
         method: "PATCH",
         body: JSON.stringify({ file, sectionIndex, expectedHeading, content }),
       }),
@@ -206,6 +206,10 @@ export const api = {
         `/api/runs/${encodeURIComponent(id)}/stop`,
         { method: "POST" },
       ),
+    delete: (id: string) =>
+      request<{ deletedIds: string[] }>(`/api/runs/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
     reply: (id: string, message: string) =>
       request<{ runId: string }>(`/api/runs/${encodeURIComponent(id)}/reply`, {
         method: "POST",

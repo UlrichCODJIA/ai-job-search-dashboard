@@ -38,7 +38,10 @@ import {
   TrackerRowConflictError,
   updateTrackerRow,
 } from "./lib/tracker.js";
-import { listApplications } from "./lib/applications.js";
+import {
+  listApplications,
+  resolveApplicationFilePath,
+} from "./lib/applications.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
 import { reconcileOrphanedRuns } from "./lib/runStore.js";
@@ -159,6 +162,15 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
 
     "/api/applications": {
       GET: async () => json(await listApplications()),
+    },
+    "/api/applications/:slug/:filename": {
+      GET: async (req) => {
+        const slug = decodeURIComponent(req.params.slug);
+        const filename = decodeURIComponent(req.params.filename);
+        const filePath = resolveApplicationFilePath(slug, filename);
+        if (!filePath) return errorResponse("file not found", 404);
+        return new Response(Bun.file(filePath));
+      },
     },
 
     "/api/upskill": {
@@ -282,13 +294,14 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
             "body must be { file, sectionIndex, expectedHeading, content }",
           );
         }
+        let warning: string | undefined;
         try {
-          await updateProfileSection(
+          ({ warning } = await updateProfileSection(
             body.file,
             body.sectionIndex,
             body.expectedHeading,
             body.content,
-          );
+          ));
         } catch (err) {
           if (err instanceof ProfileSectionConflictError) {
             return errorResponse(err.message, 409);
@@ -297,7 +310,7 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
             err instanceof Error ? err.message : String(err),
           );
         }
-        return json(await getProfileData());
+        return json({ profile: await getProfileData(), warning });
       },
     },
 

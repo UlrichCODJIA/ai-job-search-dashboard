@@ -104,6 +104,48 @@ export async function getProfileData(): Promise<ProfileData> {
   };
 }
 
+interface MarkerCheck {
+  file: string;
+  phrase: string;
+  pattern: RegExp;
+  warning: string;
+}
+
+// These two lines are the only places a free-text edit through this editor
+// can silently break something another part of the dashboard depends on
+// parsing back out.
+const MARKER_CHECKS: MarkerCheck[] = [
+  {
+    file: CLAUDE_MD_KEY,
+    phrase: "**Name:**",
+    pattern: /^\s*-\s*\*\*Name:\*\*\s*(.+)$/m,
+    warning:
+      'This save no longer has a recognizable "- **Name:** ..." line, which the dashboard uses to show your name on the Profile page.',
+  },
+  {
+    file: "05-cv-templates.md",
+    phrase: "Active template override",
+    pattern: /Active template override:\s*`([^`]+)`/,
+    warning:
+      "The \"Active template override\" line looks malformed after this edit -- the dashboard needs the template name wrapped in backticks (e.g. `Active template override: `modern``) to detect which CV template is active.",
+  },
+];
+
+export function checkKnownMarker(
+  file: string,
+  before: string,
+  after: string,
+): string | undefined {
+  const check = MARKER_CHECKS.find((m) => m.file === file);
+  if (!check) return undefined;
+  const wasPresent = before.includes(check.phrase);
+  const stillPresentAsText = after.includes(check.phrase);
+  const stillParses = check.pattern.test(after);
+  return wasPresent && stillPresentAsText && !stillParses
+    ? check.warning
+    : undefined;
+}
+
 export class ProfileSectionConflictError extends Error {
   constructor(
     public readonly expectedHeading: string,
@@ -123,7 +165,7 @@ export async function updateProfileSection(
   sectionIndex: number,
   expectedHeading: string,
   content: string,
-): Promise<void> {
+): Promise<{ warning?: string }> {
   const filePath = resolveEditableFile(file);
   return withFileLock(filePath, async () => {
     const rawText = existsSync(filePath)
@@ -143,6 +185,8 @@ export async function updateProfileSection(
       content: content.trim(),
     };
     const rewritten = stringifyMarkdownDocument(doc);
+    const warning = checkKnownMarker(file, rawText, rewritten);
     await atomicWriteFile(filePath, matchEol(rewritten, rawText));
+    return { warning };
   });
 }

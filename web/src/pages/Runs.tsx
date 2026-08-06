@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { KNOWN_COMMANDS } from "../api/runTypes";
 import type { RunEvent, RunRecord } from "../api/runTypes";
 import {
+  useDeleteRun,
   useLaunchRun,
   useReplyToRun,
   useReports,
@@ -23,6 +24,7 @@ import { PermissionCard } from "../components/PermissionCard";
 import { QuestionCard } from "../components/QuestionCard";
 import { QueryState } from "../components/QueryState";
 import { RunLogViewer } from "../components/RunLogViewer";
+import { useConfirm } from "../hooks/useConfirm";
 import { useRunSocket } from "../hooks/useRunSocket";
 import { countRunningAgents } from "../lib/runAgents";
 import { inputClass, primaryButtonClass } from "../lib/ui";
@@ -345,6 +347,97 @@ function Reports() {
   );
 }
 
+function ThreadRow({
+  thread,
+  isActive,
+}: {
+  thread: RunThread;
+  isActive: boolean;
+}) {
+  const { rootId, rootRun, latestRun, replyCount } = thread;
+  const navigate = useNavigate();
+  const deleteRun = useDeleteRun();
+  const confirmDelete = useConfirm<string>();
+  const isRunning = latestRun.status === "running";
+  const isArmed = confirmDelete.isArmed(rootId);
+
+  const handleDelete = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!isArmed) {
+      confirmDelete.arm(rootId);
+      return;
+    }
+    deleteRun.mutate(rootId, {
+      onSuccess: () => {
+        confirmDelete.disarm();
+        if (isActive) navigate("/runs");
+      },
+    });
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={() => navigate(`/runs/${latestRun.id}`)}
+        className={`flex flex-1 items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-sm transition-colors ${
+          isActive
+            ? "border-signal/30 bg-signal/[0.06]"
+            : "border-border/10 hover:border-signal/20"
+        }`}
+      >
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="shrink-0 font-medium text-ink">
+            {rootRun.command}
+          </span>
+          {rootRun.args && (
+            <span className="min-w-0 truncate text-xs text-muted">
+              {rootRun.args}
+            </span>
+          )}
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          {replyCount > 0 && (
+            <NeutralPill>
+              +{replyCount} {replyCount === 1 ? "reply" : "replies"}
+            </NeutralPill>
+          )}
+          {latestRun.status === "running" && (
+            <Pill color={RUN_STATUS_COLORS.running}>running</Pill>
+          )}
+          {latestRun.status === "completed" && (
+            <Pill color={RUN_STATUS_COLORS.completed}>done</Pill>
+          )}
+          {latestRun.status === "error" && (
+            <Pill color={RUN_STATUS_COLORS.error}>error</Pill>
+          )}
+          {latestRun.status === "stopped" && (
+            <Pill color={RUN_STATUS_COLORS.stopped}>stopped</Pill>
+          )}
+          {relativeTime(latestRun.startedAt)}
+        </span>
+      </button>
+      <button
+        onClick={handleDelete}
+        disabled={deleteRun.isPending || isRunning}
+        title={
+          isRunning
+            ? "Stop this run before deleting it"
+            : isArmed
+              ? "Click again to permanently delete this run and its replies"
+              : "Delete this run"
+        }
+        className={`shrink-0 rounded-full border px-2.5 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          isArmed
+            ? "border-red-500/40 bg-red-500/10 text-red-500"
+            : "border-border/10 text-muted hover:border-red-500/30 hover:text-red-500"
+        }`}
+      >
+        {deleteRun.isPending ? "..." : isArmed ? "Confirm?" : "✕"}
+      </button>
+    </div>
+  );
+}
+
 export default function Runs() {
   const { runId } = useParams<{ runId?: string }>();
   const navigate = useNavigate();
@@ -380,47 +473,12 @@ export default function Runs() {
               />
             ) : (
               <div className="flex flex-col gap-1.5">
-                {threads.map(({ rootId, rootRun, latestRun, replyCount }) => (
-                  <button
-                    key={rootId}
-                    onClick={() => navigate(`/runs/${latestRun.id}`)}
-                    className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-sm transition-colors ${
-                      rootId === activeRootId
-                        ? "border-signal/30 bg-signal/[0.06]"
-                        : "border-border/10 hover:border-signal/20"
-                    }`}
-                  >
-                    <span className="flex min-w-0 flex-1 items-center gap-2">
-                      <span className="shrink-0 font-medium text-ink">
-                        {rootRun.command}
-                      </span>
-                      {rootRun.args && (
-                        <span className="min-w-0 truncate text-xs text-muted">
-                          {rootRun.args}
-                        </span>
-                      )}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
-                      {replyCount > 0 && (
-                        <NeutralPill>
-                          +{replyCount} {replyCount === 1 ? "reply" : "replies"}
-                        </NeutralPill>
-                      )}
-                      {latestRun.status === "running" && (
-                        <Pill color={RUN_STATUS_COLORS.running}>running</Pill>
-                      )}
-                      {latestRun.status === "completed" && (
-                        <Pill color={RUN_STATUS_COLORS.completed}>done</Pill>
-                      )}
-                      {latestRun.status === "error" && (
-                        <Pill color={RUN_STATUS_COLORS.error}>error</Pill>
-                      )}
-                      {latestRun.status === "stopped" && (
-                        <Pill color={RUN_STATUS_COLORS.stopped}>stopped</Pill>
-                      )}
-                      {relativeTime(latestRun.startedAt)}
-                    </span>
-                  </button>
+                {threads.map((thread) => (
+                  <ThreadRow
+                    key={thread.rootId}
+                    thread={thread}
+                    isActive={thread.rootId === activeRootId}
+                  />
                 ))}
               </div>
             )

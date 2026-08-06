@@ -148,7 +148,7 @@ export function useUpdateProfileSection() {
       content: string;
     }) =>
       api.profile.updateSection(args.file, args.sectionIndex, args.expectedHeading, args.content),
-    onSuccess: (data) => queryClient.setQueryData(queryKeys.profile, data),
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.profile, data.profile),
   });
 }
 
@@ -291,6 +291,15 @@ export function useStopRun() {
       queryClient.invalidateQueries({ queryKey: queryKeys.runs });
       queryClient.invalidateQueries({ queryKey: queryKeys.run(id) });
     },
+  });
+}
+
+export function useDeleteRun() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.runs.delete(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.runs }),
   });
 }
 

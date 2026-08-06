@@ -88,6 +88,21 @@ export async function setSessionForKey(
   });
 }
 
+export async function deleteThread(rootId: string): Promise<RunRecord[]> {
+  return withFileLock(STORE_PATH, async () => {
+    const store = await readStore();
+    const toDelete = store.runs.filter(
+      (r) => (r.threadRootId ?? r.id) === rootId,
+    );
+    if (toDelete.length === 0) return [];
+    store.runs = store.runs.filter(
+      (r) => (r.threadRootId ?? r.id) !== rootId,
+    );
+    await writeStore(store);
+    return toDelete;
+  });
+}
+
 export async function reconcileOrphanedRuns(): Promise<number> {
   return withFileLock(STORE_PATH, async () => {
     const store = await readStore();

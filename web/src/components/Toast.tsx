@@ -31,15 +31,15 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TONE_STYLES: Record<ToastTone, { card: string; icon: string }> = {
   success: {
-    card: "border-emerald-500/30 bg-emerald-500/[0.08]",
+    card: "border-emerald-500/30 bg-surface",
     icon: "text-emerald-500",
   },
-  error: { card: "border-red-500/30 bg-red-500/[0.08]", icon: "text-red-500" },
+  error: { card: "border-red-500/30 bg-surface", icon: "text-red-500" },
   warning: {
-    card: "border-amber-500/30 bg-amber-500/[0.08]",
+    card: "border-amber-500/30 bg-surface",
     icon: "text-amber-700 dark:text-amber-500",
   },
-  info: { card: "border-signal/30 bg-signal/[0.08]", icon: "text-signal" },
+  info: { card: "border-signal/30 bg-surface", icon: "text-signal" },
 };
 
 const TONE_ICONS: Record<ToastTone, string> = {
@@ -93,7 +93,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className={`${t.closing ? "animate-toast-out" : "animate-toast-in"} pointer-events-auto rounded-2xl border p-3 shadow-lg backdrop-blur-sm ${tone.card}`}
+              className={`${t.closing ? "animate-toast-out" : "animate-toast-in"} pointer-events-auto rounded-2xl border p-3 shadow-lg ${tone.card}`}
             >
               <div className="flex items-start gap-2">
                 <span aria-hidden className={`mt-0.5 ${tone.icon}`}>

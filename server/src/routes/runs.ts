@@ -1,7 +1,12 @@
 import { errorResponse, json } from "../lib/http.js";
 import { startRun, stopRun } from "../lib/claudeRunner.js";
-import { getRun, listRuns, type RunRecord } from "../lib/runStore.js";
-import { getEventLog, getPendingApprovalCount } from "../ws/hub.js";
+import {
+  deleteThread,
+  getRun,
+  listRuns,
+  type RunRecord,
+} from "../lib/runStore.js";
+import { deleteRunEvents, getEventLog, getPendingApprovalCount } from "../ws/hub.js";
 
 const KNOWN_COMMANDS = new Set([
   "/setup",
@@ -56,6 +61,26 @@ export const runsRoutes = {
       const run = await getRun(decodeURIComponent(req.params.id));
       if (!run) return errorResponse("run not found", 404);
       return json(withPendingApprovals(run));
+    },
+    DELETE: async (req: Request & { params: { id: string } }) => {
+      const id = decodeURIComponent(req.params.id);
+      const current = await getRun(id);
+      if (!current) return errorResponse("run not found", 404);
+      const rootId = current.threadRootId ?? current.id;
+      const all = await listRuns();
+      const threadRuns = all.filter(
+        (r) => (r.threadRootId ?? r.id) === rootId,
+      );
+      if (threadRuns.some((r) => r.status === "running")) {
+        return errorResponse(
+          "stop this run before deleting it -- one of its replies is still in progress",
+        );
+      }
+      const deleted = await deleteThread(rootId);
+      for (const run of deleted) {
+        await deleteRunEvents(run.id);
+      }
+      return json({ deletedIds: deleted.map((r) => r.id) });
     },
   },
   "/api/runs/:id/stop": {

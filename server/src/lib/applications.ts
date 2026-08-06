@@ -26,6 +26,23 @@ export interface ApplicationRecord {
 const INTERVIEW_PREP_PATTERN = /^interview_prep_(.+)\.md$/;
 const INTERVIEW_CHEATSHEET_PATTERN = /^interview_cheatsheet_(.+)\.md$/;
 
+const DOWNLOADABLE_FILENAME_PATTERN =
+  /^(job_posting\.md|cv_draft\.tex|cover_letter\.tex|outcome\.md|interview_prep_.+\.md|interview_cheatsheet_.+\.md)$/;
+
+export function resolveApplicationFilePath(
+  slug: string,
+  filename: string,
+): string | null {
+  if (!DOWNLOADABLE_FILENAME_PATTERN.test(filename)) return null;
+  const target = path.join(
+    paths.applicationsDir,
+    path.basename(slug),
+    path.basename(filename),
+  );
+  if (!existsSync(target)) return null;
+  return target;
+}
+
 export function parseInterviewPrepFiles(filenames: string[]): InterviewPrepFile[] {
   const stages = new Map<string, InterviewPrepFile>();
   for (const name of filenames) {

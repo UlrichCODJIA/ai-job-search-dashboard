@@ -158,3 +158,138 @@ describe("getProfileData -- placeholder scan coverage", () => {
     expect(data.skillFiles.some((f) => f.filename === "search-queries.md")).toBe(false);
   });
 });
+
+describe("updateProfileSection -- known-marker warning", () => {
+  beforeEach(() => {
+    testDir = mkdtempSync(path.join(tmpdir(), "profile-marker-test-"));
+    mockPaths.claudeMd = claudeMdPath();
+    mockPaths.profileSkillsDir = testDir;
+  });
+
+  afterEach(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  test("dropping the leading list marker while keeping the bold label returns a warning", async () => {
+    const fixture = [
+      "# Job Application Assistant",
+      "",
+      "## Candidate Profile",
+      "",
+      "- **Name:** Jane Doe",
+      "",
+    ].join("\n");
+    writeFileSync(claudeMdPath(), fixture, "utf-8");
+
+    // Phrase "**Name:**" survives, but the leading "- " list marker the
+    // parser requires is gone -- exactly the "still there but malformed"
+    // case this check exists to catch.
+    const result = await updateProfileSection(
+      "CLAUDE.md",
+      1,
+      "Candidate Profile",
+      "**Name:** Jane Doe",
+    );
+    expect(result.warning).toContain("Name");
+  });
+
+  test("editing the section but keeping the Name line intact returns no warning", async () => {
+    const fixture = [
+      "# Job Application Assistant",
+      "",
+      "## Candidate Profile",
+      "",
+      "- **Name:** Jane Doe",
+      "- Location: Remote",
+      "",
+    ].join("\n");
+    writeFileSync(claudeMdPath(), fixture, "utf-8");
+
+    const result = await updateProfileSection(
+      "CLAUDE.md",
+      1,
+      "Candidate Profile",
+      "- **Name:** Jane Doe\n- Location: Kigali",
+    );
+    expect(result.warning).toBeUndefined();
+  });
+
+  test("deliberately removing the Name line entirely is not flagged as a warning", async () => {
+    const fixture = [
+      "# Job Application Assistant",
+      "",
+      "## Candidate Profile",
+      "",
+      "- **Name:** Jane Doe",
+      "",
+    ].join("\n");
+    writeFileSync(claudeMdPath(), fixture, "utf-8");
+
+    const result = await updateProfileSection(
+      "CLAUDE.md",
+      1,
+      "Candidate Profile",
+      "No name field anymore.",
+    );
+    expect(result.warning).toBeUndefined();
+  });
+
+  test("editing an unrelated section never triggers the marker warning", async () => {
+    const fixture = [
+      "# Job Application Assistant",
+      "",
+      "## Candidate Profile",
+      "",
+      "- **Name:** Jane Doe",
+      "",
+      "## Skills",
+      "",
+      "- Python",
+      "",
+    ].join("\n");
+    writeFileSync(claudeMdPath(), fixture, "utf-8");
+
+    const result = await updateProfileSection("CLAUDE.md", 2, "Skills", "- Rust");
+    expect(result.warning).toBeUndefined();
+  });
+
+  test("mangling the cv-templates override's backticks returns a warning", async () => {
+    const fixture = [
+      "# CV Templates",
+      "",
+      "## Active Template",
+      "",
+      "Active template override: `modern`",
+      "",
+    ].join("\n");
+    writeFileSync(path.join(testDir, "05-cv-templates.md"), fixture, "utf-8");
+
+    const result = await updateProfileSection(
+      "05-cv-templates.md",
+      1,
+      "Active Template",
+      "Active template override: modern",
+    );
+    expect(result.warning).toContain("Active template override");
+  });
+
+  test("keeping the cv-templates override well-formed returns no warning", async () => {
+    const fixture = [
+      "# CV Templates",
+      "",
+      "## Active Template",
+      "",
+      "Active template override: `modern`",
+      "",
+    ].join("\n");
+    writeFileSync(path.join(testDir, "05-cv-templates.md"), fixture, "utf-8");
+
+    const result = await updateProfileSection(
+      "05-cv-templates.md",
+      1,
+      "Active Template",
+      "Active template override: `classic`",
+    );
+    expect(result.warning).toBeUndefined();
+  });
+});
