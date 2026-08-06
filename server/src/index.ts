@@ -42,6 +42,7 @@ import {
   listApplications,
   resolveApplicationFilePath,
 } from "./lib/applications.js";
+import { resolveTrackerFilePath } from "./lib/trackerFiles.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
 import { reconcileOrphanedRuns } from "./lib/runStore.js";
@@ -168,6 +169,15 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         const slug = decodeURIComponent(req.params.slug);
         const filename = decodeURIComponent(req.params.filename);
         const filePath = resolveApplicationFilePath(slug, filename);
+        if (!filePath) return errorResponse("file not found", 404);
+        return new Response(Bun.file(filePath));
+      },
+    },
+    "/api/tracker-files/:folder/:filename": {
+      GET: async (req) => {
+        const folder = decodeURIComponent(req.params.folder);
+        const filename = decodeURIComponent(req.params.filename);
+        const filePath = resolveTrackerFilePath(folder, filename);
         if (!filePath) return errorResponse("file not found", 404);
         return new Response(Bun.file(filePath));
       },

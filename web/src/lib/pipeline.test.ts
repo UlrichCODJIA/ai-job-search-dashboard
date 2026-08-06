@@ -42,6 +42,8 @@ function trackerRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
     notes: "",
     cv_file: "",
     cover_letter_file: "",
+    cv_file_pdf: "",
+    cover_letter_file_pdf: "",
     source: "",
     ...overrides,
   };

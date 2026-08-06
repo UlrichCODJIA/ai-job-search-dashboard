@@ -1,6 +1,7 @@
 import { readCsvFile, writeCsvFileAtomic, type CsvRow } from "./csv.js";
 import { withFileLock } from "./fs.js";
 import { paths } from "./paths.js";
+import { pdfSiblingPath } from "./trackerFiles.js";
 
 const TRACKER_HEADER = [
   "date",
@@ -48,6 +49,8 @@ export function bucketForStatus(status: string): StatusBucket {
 export interface TrackerRow extends CsvRow {
   id: string;
   bucket: StatusBucket;
+  cv_file_pdf: string;
+  cover_letter_file_pdf: string;
 }
 
 function rowId(row: CsvRow, index: number): string {
@@ -55,13 +58,26 @@ function rowId(row: CsvRow, index: number): string {
   return Buffer.from(raw, "utf-8").toString("base64url");
 }
 
+function withPdfSiblings(
+  row: CsvRow & { id: string; bucket: StatusBucket },
+): TrackerRow {
+  return {
+    ...row,
+    cv_file_pdf: (row.cv_file && pdfSiblingPath(row.cv_file)) || "",
+    cover_letter_file_pdf:
+      (row.cover_letter_file && pdfSiblingPath(row.cover_letter_file)) || "",
+  };
+}
+
 export async function listTrackerRows(): Promise<TrackerRow[]> {
   const { rows } = await readCsvFile(paths.tracker);
-  return rows.map((row, index) => ({
-    ...row,
-    id: rowId(row, index),
-    bucket: bucketForStatus(row.status ?? ""),
-  }));
+  return rows.map((row, index) =>
+    withPdfSiblings({
+      ...row,
+      id: rowId(row, index),
+      bucket: bucketForStatus(row.status ?? ""),
+    }),
+  );
 }
 
 export class TrackerRowConflictError extends Error {
@@ -102,6 +118,10 @@ export async function updateTrackerRow(
     const matched = { ...current, ...patch };
     const nextRows = rows.map((row, i) => (i === index ? matched : row));
     await writeCsvFileAtomic(paths.tracker, activeHeader, nextRows);
-    return { ...matched, id, bucket: bucketForStatus(matched.status ?? "") };
+    return withPdfSiblings({
+      ...matched,
+      id,
+      bucket: bucketForStatus(matched.status ?? ""),
+    });
   });
 }

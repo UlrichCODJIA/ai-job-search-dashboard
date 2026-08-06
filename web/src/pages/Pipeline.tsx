@@ -82,6 +82,43 @@ function DocumentLink({
   );
 }
 
+function trackerFileUrl(relativePath: string): string {
+  const slashIndex = relativePath.indexOf("/");
+  const folder = relativePath.slice(0, slashIndex);
+  const filename = relativePath.slice(slashIndex + 1);
+  return `/api/tracker-files/${encodeURIComponent(folder)}/${encodeURIComponent(filename)}`;
+}
+
+function TrackerFileLink({ path, pdfPath }: { path: string; pdfPath?: string }) {
+  if (!path) return <>N/A</>;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <a
+        href={trackerFileUrl(path)}
+        target="_blank"
+        rel="noreferrer"
+        download
+        className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition-colors hover:bg-signal/10 hover:text-signal"
+        title={`Download ${path}`}
+      >
+        <span aria-hidden>⬇</span>
+        {path.split("/").pop()}
+      </a>
+      {pdfPath && (
+        <a
+          href={trackerFileUrl(pdfPath)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 rounded-full bg-signal/10 px-2.5 py-0.5 text-xs font-medium text-signal transition-colors hover:bg-signal/20"
+          title={`Open ${pdfPath}`}
+        >
+          PDF
+        </a>
+      )}
+    </span>
+  );
+}
+
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
@@ -344,8 +381,19 @@ export default function Pipeline() {
                         )
                       }
                     />
-                    <Field label="CV file" value={selected.cv_file} />
-                    <Field label="Cover letter" value={selected.cover_letter_file} />
+                    <Field
+                      label="CV file"
+                      value={<TrackerFileLink path={selected.cv_file} pdfPath={selected.cv_file_pdf} />}
+                    />
+                    <Field
+                      label="Cover letter"
+                      value={
+                        <TrackerFileLink
+                          path={selected.cover_letter_file}
+                          pdfPath={selected.cover_letter_file_pdf}
+                        />
+                      }
+                    />
                     <Field label="Next interview" value={selected.next_interview_date} />
                   </div>
 

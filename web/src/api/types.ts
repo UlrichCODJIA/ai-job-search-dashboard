@@ -49,6 +49,8 @@ export interface TrackerRow {
   notes: string;
   cv_file: string;
   cover_letter_file: string;
+  cv_file_pdf: string;
+  cover_letter_file_pdf: string;
   source: string;
   next_interview_date?: string;
   [extra: string]: string | undefined;

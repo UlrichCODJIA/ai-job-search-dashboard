@@ -413,7 +413,7 @@ function ThreadRow({
     <div className="flex items-center gap-1.5">
       <button
         onClick={() => navigate(`/runs/${latestRun.id}`)}
-        className={`flex flex-1 items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-sm transition-colors ${
+        className={`flex min-w-0 flex-1 items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-sm transition-colors ${
           isActive
             ? "border-signal/30 bg-signal/[0.06]"
             : "border-border/10 hover:border-signal/20"

@@ -10,7 +10,14 @@ import { paths } from "../src/lib/paths.js";
 import type { TrackerRow } from "../src/lib/tracker.js";
 
 function row(company: string, extra: Partial<TrackerRow> = {}): TrackerRow {
-  return { company, id: `id-${company}`, bucket: "Active", ...extra };
+  return {
+    company,
+    id: `id-${company}`,
+    bucket: "Active",
+    cv_file_pdf: "",
+    cover_letter_file_pdf: "",
+    ...extra,
+  };
 }
 
 describe("findTrackerRowForCompany", () => {
