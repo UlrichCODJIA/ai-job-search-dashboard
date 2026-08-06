@@ -4,6 +4,7 @@ import {
   usePortalSkills,
   useRegisteredTemplates,
   useSearchQueries,
+  useSetPortalEnabled,
   useSettings,
   useUpdateSearchQueries,
   useUpdateSettings,
@@ -11,6 +12,7 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { InlineSectionHeading } from "../components/layout/SectionHeading";
 import { QueryState } from "../components/QueryState";
+import { useToast } from "../components/Toast";
 import { primaryButtonClass } from "../lib/ui";
 
 const textareaClass =
@@ -161,9 +163,43 @@ function PermissionsEditor() {
   );
 }
 
+function PortalToggle({
+  enabled,
+  onToggle,
+  pending,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+  pending: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={onToggle}
+      disabled={pending}
+      title={enabled ? "Disable this portal" : "Enable this portal"}
+      className={clsx(
+        "mt-0.5 flex h-4 w-7 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        enabled ? "bg-signal" : "bg-surface-2",
+      )}
+    >
+      <span
+        className={clsx(
+          "h-3 w-3 rounded-full bg-white shadow transition-transform",
+          enabled ? "translate-x-3.5" : "translate-x-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
 function InstalledPortals() {
   const portalsQuery = usePortalSkills();
   const portals = portalsQuery.data ?? [];
+  const setPortalEnabled = useSetPortalEnabled();
+  const { push } = useToast();
 
   return (
     <section className="rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
@@ -182,9 +218,26 @@ function InstalledPortals() {
                   key={portal.name}
                   className="flex items-start gap-2.5 rounded-2xl border border-border/10 px-3 py-2"
                 >
-                  <span
-                    className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${portal.enabled ? "bg-signal" : "bg-muted"}`}
-                    title={portal.enabled ? "Enabled" : "Disabled"}
+                  <PortalToggle
+                    enabled={portal.enabled}
+                    pending={
+                      setPortalEnabled.isPending &&
+                      setPortalEnabled.variables?.name === portal.name
+                    }
+                    onToggle={() =>
+                      setPortalEnabled.mutate(
+                        { name: portal.name, enabled: !portal.enabled },
+                        {
+                          onError: (err) =>
+                            push({
+                              tone: "error",
+                              title: "Couldn't update portal",
+                              description:
+                                err instanceof Error ? err.message : String(err),
+                            }),
+                        },
+                      )
+                    }
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink">

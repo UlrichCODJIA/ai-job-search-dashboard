@@ -4,6 +4,7 @@ import {
   deleteThread,
   getRun,
   listRuns,
+  type RunPermissionMode,
   type RunRecord,
 } from "../lib/runStore.js";
 import { deleteRunEvents, getEventLog, getPendingApprovalCount } from "../ws/hub.js";
@@ -24,10 +25,28 @@ const KNOWN_COMMANDS = new Set([
   "/notion-sync",
 ]);
 
+const ALLOWED_PERMISSION_MODES = new Set<RunPermissionMode>([
+  "default",
+  "acceptEdits",
+]);
+
 interface StartRunBody {
   command?: string;
   args?: string;
   resumeKey?: string;
+  permissionMode?: string;
+}
+
+export function parsePermissionMode(
+  value: string | undefined,
+): RunPermissionMode | undefined {
+  if (value === undefined) return undefined;
+  if (!ALLOWED_PERMISSION_MODES.has(value as RunPermissionMode)) {
+    throw new Error(
+      `permissionMode must be one of: ${[...ALLOWED_PERMISSION_MODES].join(", ")}`,
+    );
+  }
+  return value as RunPermissionMode;
 }
 
 function withPendingApprovals(run: RunRecord) {
@@ -48,10 +67,17 @@ export const runsRoutes = {
           `command must be one of: ${[...KNOWN_COMMANDS].join(", ")}`,
         );
       }
+      let permissionMode: RunPermissionMode | undefined;
+      try {
+        permissionMode = parsePermissionMode(body.permissionMode);
+      } catch (err) {
+        return errorResponse(err instanceof Error ? err.message : String(err));
+      }
       const runId = await startRun({
         command: body.command,
         args: body.args,
         resumeKey: body.resumeKey,
+        permissionMode,
       });
       return json({ runId }, { status: 201 });
     },

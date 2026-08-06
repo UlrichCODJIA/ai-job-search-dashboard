@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -12,7 +12,7 @@ mock.module("../src/lib/paths.js", () => ({
   paths: mockPaths,
 }));
 
-const { listPortalSkills } = await import("../src/lib/portals.js");
+const { listPortalSkills, setPortalEnabled } = await import("../src/lib/portals.js");
 
 function writeSkill(name: string, extraFrontmatter = ""): void {
   const dir = path.join(testDir, "skills", name);
@@ -122,5 +122,81 @@ describe("listPortalSkills -- health merge", () => {
     const disabled = skills.find((s) => s.name === "disabled-search");
     expect(disabled?.enabled).toBe(false);
     expect(disabled?.healthStatus).toBe("skipped_disabled");
+  });
+});
+
+describe("setPortalEnabled", () => {
+  beforeEach(() => {
+    testDir = mkdtempSync(path.join(tmpdir(), "portals-toggle-test-"));
+    mockPaths.agentSkillsDir = path.join(testDir, "skills");
+    mockPaths.portalHealth = path.join(testDir, "portal_health.json");
+    mkdirSync(mockPaths.agentSkillsDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    rmSync(testDir, { recursive: true, force: true });
+  });
+
+  function skillPath(name: string): string {
+    return path.join(mockPaths.agentSkillsDir, name, "SKILL.md");
+  }
+
+  test("disabling a portal with no existing enabled field inserts one", async () => {
+    writeSkill("acme-search");
+
+    await setPortalEnabled("acme-search", false);
+
+    const skills = await listPortalSkills();
+    expect(skills.find((s) => s.name === "acme-search")?.enabled).toBe(false);
+  });
+
+  test("re-enabling a portal that already has enabled: false flips it in place", async () => {
+    writeSkill("acme-search", "enabled: false");
+
+    await setPortalEnabled("acme-search", true);
+
+    const skills = await listPortalSkills();
+    expect(skills.find((s) => s.name === "acme-search")?.enabled).toBe(true);
+    // Exactly one enabled: line should remain, not a duplicate appended alongside it.
+    const raw = readFileSync(skillPath("acme-search"), "utf-8");
+    expect(raw.match(/^enabled:/gm)?.length).toBe(1);
+  });
+
+  test("every other frontmatter field and the body are preserved untouched", async () => {
+    writeSkill("acme-search");
+    const before = readFileSync(skillPath("acme-search"), "utf-8");
+
+    await setPortalEnabled("acme-search", false);
+
+    const after = readFileSync(skillPath("acme-search"), "utf-8");
+    expect(after).toContain("name: acme-search");
+    expect(after).toContain("Searches acme-search for jobs.");
+    expect(after).toContain("# acme-search");
+    // Only the frontmatter block should have changed (one new "enabled" line).
+    expect(after.length).toBeGreaterThan(before.length);
+  });
+
+  test("throws for a portal name that doesn't resolve to any skill directory", async () => {
+    writeSkill("acme-search");
+    await expect(setPortalEnabled("does-not-exist", false)).rejects.toThrow(
+      /portal not found/,
+    );
+  });
+
+  test("resolves by the frontmatter name field, not the directory name", async () => {
+    const dir = path.join(mockPaths.agentSkillsDir, "dir-name-differs");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, "SKILL.md"),
+      ["---", "name: friendly-name", "description: >", "  Searches.", "---", "", "# body"].join(
+        "\n",
+      ),
+      "utf-8",
+    );
+
+    await setPortalEnabled("friendly-name", false);
+
+    const skills = await listPortalSkills();
+    expect(skills.find((s) => s.name === "friendly-name")?.enabled).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { atomicWriteFile, withFileLock } from "./fs.js";
 import { paths } from "./paths.js";
 
 export type RunStatus = "running" | "completed" | "error" | "stopped";
+export type RunPermissionMode = "default" | "acceptEdits";
 
 export interface RunRecord {
   id: string;
@@ -19,6 +20,7 @@ export interface RunRecord {
   error?: string;
   threadRootId?: string;
   resumeFailed?: boolean;
+  permissionMode?: RunPermissionMode;
 }
 
 interface RunStoreFile {

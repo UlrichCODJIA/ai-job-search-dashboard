@@ -1,7 +1,7 @@
 import { useMemo, useState, type MouseEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { KNOWN_COMMANDS } from "../api/runTypes";
-import type { RunEvent, RunRecord } from "../api/runTypes";
+import type { RunEvent, RunPermissionMode, RunRecord } from "../api/runTypes";
 import {
   useDeleteRun,
   useLaunchRun,
@@ -77,12 +77,18 @@ function groupIntoThreads(runs: RunRecord[]): RunThread[] {
 function Launcher() {
   const [command, setCommand] = useState<string>(KNOWN_COMMANDS[0]);
   const [args, setArgs] = useState("");
+  const [permissionMode, setPermissionMode] =
+    useState<RunPermissionMode>("default");
   const launchRun = useLaunchRun();
   const navigate = useNavigate();
 
   const handleLaunch = () => {
     launchRun.mutate(
-      { command, args: args.trim() || undefined },
+      {
+        command,
+        args: args.trim() || undefined,
+        permissionMode: permissionMode === "default" ? undefined : permissionMode,
+      },
       { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
     );
   };
@@ -117,6 +123,25 @@ function Launcher() {
         >
           {launchRun.isPending ? "Starting..." : "Launch"}
         </button>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <label htmlFor="permission-mode" className="text-xs text-muted">
+          Permissions
+        </label>
+        <select
+          id="permission-mode"
+          value={permissionMode}
+          onChange={(e) => setPermissionMode(e.target.value as RunPermissionMode)}
+          className={inputClass}
+        >
+          <option value="default">Manual approval (default)</option>
+          <option value="acceptEdits">Auto-approve edits</option>
+        </select>
+        {permissionMode === "acceptEdits" && (
+          <span className="text-xs text-amber-600 dark:text-amber-500">
+            File edits and common filesystem commands won't need approval this run.
+          </span>
+        )}
       </div>
       {launchRun.isError && (
         <p className="mt-2 text-xs text-red-500">
@@ -228,6 +253,7 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
   const canReply = !isRunning && Boolean(runQuery.data?.sessionId);
   const hasResumeFailure = thread.some((r) => r.resumeFailed);
   const runningAgentCount = useMemo(() => countRunningAgents(events), [events]);
+  const usesAcceptEdits = thread[0]?.permissionMode === "acceptEdits";
 
   return (
     <div className="flex flex-col gap-3 rounded-3xl border border-border/10 bg-surface p-4 shadow-sm">
@@ -245,6 +271,14 @@ function RunDetail({ runId, runs }: { runId: string; runs: RunRecord[] }) {
           )}
         </InlineSectionHeading>
         <div className="flex items-center gap-2">
+          {usesAcceptEdits && (
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+              title="This run auto-approved file edits and common filesystem commands instead of asking first"
+            >
+              auto-approve edits
+            </span>
+          )}
           {hasResumeFailure && (
             <span
               className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
@@ -396,6 +430,14 @@ function ThreadRow({
           )}
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs text-muted">
+          {rootRun.permissionMode === "acceptEdits" && (
+            <span
+              className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+              title="This run auto-approved file edits and common filesystem commands instead of asking first"
+            >
+              auto-approve edits
+            </span>
+          )}
           {replyCount > 0 && (
             <NeutralPill>
               +{replyCount} {replyCount === 1 ? "reply" : "replies"}

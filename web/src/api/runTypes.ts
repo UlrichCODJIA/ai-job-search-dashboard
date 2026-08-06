@@ -1,5 +1,7 @@
 export type RunStatus = "running" | "completed" | "error" | "stopped";
 
+export type RunPermissionMode = "default" | "acceptEdits";
+
 export interface AskUserQuestionOption {
   label: string;
   description: string;
@@ -27,6 +29,7 @@ export interface RunRecord {
   pendingApprovals?: number;
   threadRootId?: string;
   resumeFailed?: boolean;
+  permissionMode?: RunPermissionMode;
 }
 
 export type RunEvent =

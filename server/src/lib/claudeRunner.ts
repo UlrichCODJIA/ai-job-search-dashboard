@@ -8,6 +8,7 @@ import {
   getSessionForKey,
   setSessionForKey,
   updateRun,
+  type RunPermissionMode,
 } from "./runStore.js";
 
 export interface StartRunOptions {
@@ -16,6 +17,7 @@ export interface StartRunOptions {
   resumeKey?: string;
   resumeSessionId?: string;
   threadRootId?: string;
+  permissionMode?: RunPermissionMode;
 }
 
 interface ContentBlock {
@@ -57,6 +59,7 @@ export async function startRun(opts: StartRunOptions): Promise<string> {
     status: "running",
     startedAt: Date.now(),
     threadRootId: opts.threadRootId,
+    permissionMode: opts.permissionMode,
   });
 
   emit(runId, {
@@ -66,11 +69,15 @@ export async function startRun(opts: StartRunOptions): Promise<string> {
     args: opts.args,
   });
 
-  void runQuery(runId, prompt, opts.resumeKey, opts.resumeSessionId).catch(
-    (err) => {
-      console.error(`Unhandled error in run ${runId}:`, err);
-    },
-  );
+  void runQuery(
+    runId,
+    prompt,
+    opts.resumeKey,
+    opts.resumeSessionId,
+    opts.permissionMode,
+  ).catch((err) => {
+    console.error(`Unhandled error in run ${runId}:`, err);
+  });
 
   return runId;
 }
@@ -88,6 +95,7 @@ async function runQuery(
   prompt: string,
   resumeKey?: string,
   explicitResumeSessionId?: string,
+  permissionMode: RunPermissionMode = "default",
 ): Promise<void> {
   const canUseTool = createPermissionHandler(runId);
   const resumeSessionId =
@@ -121,7 +129,7 @@ async function runQuery(
       options: {
         cwd: paths.repoRoot,
         canUseTool,
-        permissionMode: "default",
+        permissionMode,
         abortController,
         ...(resumeSessionId ? { resume: resumeSessionId } : {}),
       },

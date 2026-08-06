@@ -12,7 +12,7 @@ import {
 } from "./lib/documents.js";
 import { errorResponse, json } from "./lib/http.js";
 import { paths } from "./lib/paths.js";
-import { listPortalSkills } from "./lib/portals.js";
+import { listPortalSkills, setPortalEnabled } from "./lib/portals.js";
 import {
   getProfileData,
   ProfileSectionConflictError,
@@ -469,6 +469,26 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
 
     "/api/portals": {
       GET: async () => json(await listPortalSkills()),
+    },
+    "/api/portals/:name": {
+      PATCH: async (req) => {
+        const name = decodeURIComponent(req.params.name);
+        const body = (await req.json().catch(() => null)) as {
+          enabled?: boolean;
+        } | null;
+        if (typeof body?.enabled !== "boolean") {
+          return errorResponse("body must be { enabled: boolean }");
+        }
+        try {
+          await setPortalEnabled(name, body.enabled);
+        } catch (err) {
+          return errorResponse(
+            err instanceof Error ? err.message : String(err),
+            404,
+          );
+        }
+        return json(await listPortalSkills());
+      },
     },
 
     "/api/templates": {

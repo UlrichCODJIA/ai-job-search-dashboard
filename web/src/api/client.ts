@@ -1,4 +1,4 @@
-import type { RunEvent, RunRecord } from "./runTypes";
+import type { RunEvent, RunPermissionMode, RunRecord } from "./runTypes";
 import type {
   ApplicationRecord,
   PortalSkill,
@@ -182,6 +182,11 @@ export const api = {
 
   portals: {
     list: () => request<PortalSkill[]>("/api/portals"),
+    setEnabled: (name: string, enabled: boolean) =>
+      request<PortalSkill[]>(`/api/portals/${encodeURIComponent(name)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled }),
+      }),
   },
 
   templates: {
@@ -196,7 +201,12 @@ export const api = {
     list: () => request<RunRecord[]>("/api/runs"),
     get: (id: string) =>
       request<RunRecord>(`/api/runs/${encodeURIComponent(id)}`),
-    start: (body: { command: string; args?: string; resumeKey?: string }) =>
+    start: (body: {
+      command: string;
+      args?: string;
+      resumeKey?: string;
+      permissionMode?: RunPermissionMode;
+    }) =>
       request<{ runId: string }>("/api/runs", {
         method: "POST",
         body: JSON.stringify(body),

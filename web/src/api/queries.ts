@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "./client";
+import type { RunPermissionMode } from "./runTypes";
 import type { SalaryCompanyEntry, SalaryMetadata } from "./types";
 
 export const queryKeys = {
@@ -245,6 +246,15 @@ export function usePortalSkills() {
   return useQuery({ queryKey: queryKeys.portals, queryFn: api.portals.list });
 }
 
+export function useSetPortalEnabled() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { name: string; enabled: boolean }) =>
+      api.portals.setEnabled(args.name, args.enabled),
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.portals, data),
+  });
+}
+
 export function useRegisteredTemplates() {
   return useQuery({ queryKey: queryKeys.templates, queryFn: api.templates.list });
 }
@@ -277,6 +287,7 @@ export function useLaunchRun() {
       command: string;
       args?: string;
       resumeKey?: string;
+      permissionMode?: RunPermissionMode;
     }) => api.runs.start(body),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.runs }),
