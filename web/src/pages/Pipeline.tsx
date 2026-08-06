@@ -92,24 +92,24 @@ function trackerFileUrl(relativePath: string): string {
 function TrackerFileLink({ path, pdfPath }: { path: string; pdfPath?: string }) {
   if (!path) return <>N/A</>;
   return (
-    <span className="flex flex-wrap items-center gap-1.5">
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5">
       <a
         href={trackerFileUrl(path)}
         target="_blank"
         rel="noreferrer"
         download
-        className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition-colors hover:bg-signal/10 hover:text-signal"
+        className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted transition-colors hover:bg-signal/10 hover:text-signal"
         title={`Download ${path}`}
       >
-        <span aria-hidden>⬇</span>
-        {path.split("/").pop()}
+        <span aria-hidden className="shrink-0">⬇</span>
+        <span className="truncate">{path.split("/").pop()}</span>
       </a>
       {pdfPath && (
         <a
           href={trackerFileUrl(pdfPath)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 rounded-full bg-signal/10 px-2.5 py-0.5 text-xs font-medium text-signal transition-colors hover:bg-signal/20"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-signal/10 px-2.5 py-0.5 text-xs font-medium text-signal transition-colors hover:bg-signal/20"
           title={`Open ${pdfPath}`}
         >
           PDF
@@ -121,9 +121,9 @@ function TrackerFileLink({ path, pdfPath }: { path: string; pdfPath?: string }) 
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-muted">{label}</p>
-      <p className="font-medium text-ink">{value || "N/A"}</p>
+      <div className="font-medium text-ink">{value || "N/A"}</div>
     </div>
   );
 }
