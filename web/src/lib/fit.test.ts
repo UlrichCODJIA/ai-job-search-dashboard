@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   isLocationExcluded,
+  matchesFitFilter,
   rankSortPriority,
   resolveDisplayBucket,
   resolveFitBucket,
@@ -62,6 +63,39 @@ describe("resolveDisplayBucket", () => {
 
   test("passes through resolveFitBucket when there is no location veto", () => {
     expect(resolveDisplayBucket(job({ rank_verdict: "Moderate Fit" }))).toBe("medium");
+  });
+});
+
+describe("matchesFitFilter", () => {
+  test("the 'all' filter hides an excluded job", () => {
+    const excluded = job({ rank_location: "FAIL" });
+    expect(matchesFitFilter(excluded, "all")).toBe(false);
+  });
+
+  test("the 'all' filter still shows high/medium/low jobs", () => {
+    expect(matchesFitFilter(job({ rank_verdict: "Strong Fit" }), "all")).toBe(true);
+    expect(matchesFitFilter(job({ rank_verdict: "Moderate Fit" }), "all")).toBe(true);
+    expect(matchesFitFilter(job({ rank_verdict: "Poor Fit" }), "all")).toBe(true);
+  });
+
+  test("explicitly selecting 'excluded' reveals excluded jobs", () => {
+    const excluded = job({ rank_location: "FAIL" });
+    expect(matchesFitFilter(excluded, "excluded")).toBe(true);
+  });
+
+  test("explicitly selecting 'excluded' hides non-excluded jobs", () => {
+    expect(matchesFitFilter(job({ rank_verdict: "Strong Fit" }), "excluded")).toBe(false);
+  });
+
+  test("selecting a specific bucket still excludes location-failed jobs even at a matching score", () => {
+    const excludedButHighScoring = job({ rank_verdict: "Strong Fit", rank_location: "FAIL" });
+    expect(matchesFitFilter(excludedButHighScoring, "high")).toBe(false);
+  });
+
+  test("a flagged (not failed) location is unaffected by any filter", () => {
+    const flagged = job({ rank_verdict: "Strong Fit", rank_location: "FLAG" });
+    expect(matchesFitFilter(flagged, "all")).toBe(true);
+    expect(matchesFitFilter(flagged, "high")).toBe(true);
   });
 });
 

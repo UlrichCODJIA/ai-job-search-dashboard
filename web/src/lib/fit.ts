@@ -19,6 +19,12 @@ export function resolveDisplayBucket(job: ScrapedJob): DisplayBucket {
   return isLocationExcluded(job) ? "excluded" : resolveFitBucket(job);
 }
 
+export function matchesFitFilter(job: ScrapedJob, fitFilter: string): boolean {
+  const bucket = resolveDisplayBucket(job);
+  if (fitFilter === "all") return bucket !== "excluded";
+  return bucket === fitFilter;
+}
+
 const QUICK_FIT_PRIORITY: Record<FitBucket, number> = { high: 3, medium: 2, low: 1 };
 
 export function rankSortPriority(job: ScrapedJob): number {

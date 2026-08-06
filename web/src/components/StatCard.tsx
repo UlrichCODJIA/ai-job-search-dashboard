@@ -8,6 +8,7 @@ export function StatCard({
   hint,
   variant = "default",
   align = "left",
+  onClick,
 }: {
   label: string;
   value: ReactNode;
@@ -15,6 +16,7 @@ export function StatCard({
   hint?: string;
   variant?: "default" | "hero";
   align?: "left" | "center";
+  onClick?: () => void;
 }) {
   const tint = accent ?? "#0891b2";
 
@@ -37,15 +39,13 @@ export function StatCard({
     );
   }
 
-  return (
-    <div
-      className={clsx(
-        "group relative flex h-full flex-col gap-1 overflow-hidden rounded-3xl px-4 py-3.5 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow",
-        align === "center" &&
-          "items-center text-center lg:items-start lg:text-left",
-      )}
-      style={{ backgroundColor: tint }}
-    >
+  const className = clsx(
+    "group relative flex h-full flex-col gap-1 overflow-hidden rounded-3xl px-4 py-3.5 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow",
+    align === "center" && "items-center text-center lg:items-start lg:text-left",
+    onClick && "cursor-pointer text-left",
+  );
+  const content = (
+    <>
       <span className="text-xs font-semibold uppercase tracking-wide text-white/80">
         {label}
       </span>
@@ -53,6 +53,25 @@ export function StatCard({
         {value}
       </span>
       {hint && <span className="text-xs text-white/80">{hint}</span>}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        style={{ backgroundColor: tint }}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className} style={{ backgroundColor: tint }}>
+      {content}
     </div>
   );
 }

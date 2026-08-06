@@ -15,7 +15,12 @@ import { FIT_COLORS, FitPill, NeutralPill, STATUS_COLORS } from "../components/P
 import { QueryState } from "../components/QueryState";
 import { StatCard } from "../components/StatCard";
 import { isPastDeadline, isUrgentDeadline, resolveEffectiveDeadline } from "../lib/deadline";
-import { isLocationExcluded, rankSortPriority, resolveDisplayBucket } from "../lib/fit";
+import {
+  isLocationExcluded,
+  matchesFitFilter,
+  rankSortPriority,
+  resolveDisplayBucket,
+} from "../lib/fit";
 import { daysAgoLabel, daysSince, isStaleNewJob, trackerRowForCompany } from "../lib/pipeline";
 import { companySlug } from "../lib/slug";
 import { inputClass, primaryButtonClass } from "../lib/ui";
@@ -60,7 +65,7 @@ export default function Discovery() {
     return jobs
       .filter((job) => {
         if (status !== "all" && job.status !== status) return false;
-        if (fit !== "all" && resolveDisplayBucket(job) !== fit) return false;
+        if (!matchesFitFilter(job, fit)) return false;
         if (q && !`${job.title} ${job.company}`.toLowerCase().includes(q)) return false;
         return true;
       })
@@ -332,9 +337,10 @@ export default function Discovery() {
                     <StatCard
                       label="Excluded"
                       value={fitCounts.excluded}
-                      hint="location deal-breaker"
+                      hint={fit === "excluded" ? "location deal-breaker" : "location deal-breaker -- click to view"}
                       accent={FIT_COLORS.excluded}
                       align="center"
+                      onClick={() => setFit(fit === "excluded" ? "all" : "excluded")}
                     />
                   )}
                 </div>
