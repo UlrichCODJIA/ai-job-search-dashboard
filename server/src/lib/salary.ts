@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { atomicWriteFile, withFileLock } from "./fs.js";
-import { paths, REPO_ROOT } from "./paths.js";
+import { paths } from "./paths.js";
 
 export interface SalaryStatus {
   available: boolean;
@@ -77,7 +77,7 @@ export async function searchSalary(query: string): Promise<unknown> {
       resolvePython(),
       [paths.salaryLookupScript, query, "--json"],
       {
-        cwd: REPO_ROOT,
+        cwd: paths.repoRoot,
       },
     );
     let stdout = "";

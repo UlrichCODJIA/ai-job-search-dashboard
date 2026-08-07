@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { getCvTemplate, updateCvTemplate } from "./lib/cvTemplate.js";
+import { writeDashboardConfig } from "./lib/dashboardConfig.js";
 import {
   deleteDocument,
   deleteUpload,
@@ -11,7 +12,12 @@ import {
   saveUpload,
 } from "./lib/documents.js";
 import { errorResponse, json } from "./lib/http.js";
-import { paths } from "./lib/paths.js";
+import {
+  isConfigured,
+  looksLikeAiJobSearchCheckout,
+  paths,
+  RootNotConfiguredError,
+} from "./lib/paths.js";
 import { listPortalSkills, setPortalEnabled } from "./lib/portals.js";
 import {
   getProfileData,
@@ -65,21 +71,23 @@ interface RunSocketData {
   runId: string;
 }
 
-try {
-  await acquireInstanceLock();
-} catch (err) {
-  if (err instanceof AnotherInstanceRunningError) {
-    console.error(`Refusing to start: ${err.message}`);
-    process.exit(1);
+if (isConfigured()) {
+  try {
+    await acquireInstanceLock();
+  } catch (err) {
+    if (err instanceof AnotherInstanceRunningError) {
+      console.error(`Refusing to start: ${err.message}`);
+      process.exit(1);
+    }
+    throw err;
   }
-  throw err;
-}
 
-const orphanedCount = await reconcileOrphanedRuns();
-if (orphanedCount > 0) {
-  console.log(
-    `Marked ${orphanedCount} run(s) as errored: still "running" at startup, so left over from a server process that didn't shut down cleanly.`,
-  );
+  const orphanedCount = await reconcileOrphanedRuns();
+  if (orphanedCount > 0) {
+    console.log(
+      `Marked ${orphanedCount} run(s) as errored: still "running" at startup, so left over from a server process that didn't shut down cleanly.`,
+    );
+  }
 }
 
 const server: Bun.Server<RunSocketData> = Bun.serve({
@@ -87,11 +95,43 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
   hostname: HOST,
   development: false,
   error(err) {
+    if (err instanceof RootNotConfiguredError) {
+      return errorResponse(err.message, 503);
+    }
     console.error("Unhandled route error:", err);
     return errorResponse("internal server error", 500);
   },
   routes: {
-    "/api/health": () => json({ ok: true, repoRoot: paths.repoRoot }),
+    "/api/health": () =>
+      json({
+        ok: true,
+        configured: isConfigured(),
+        repoRoot: isConfigured() ? paths.repoRoot : null,
+      }),
+
+    "/api/setup": {
+      GET: async () =>
+        json({
+          configured: isConfigured(),
+          repoRoot: isConfigured() ? paths.repoRoot : null,
+        }),
+      POST: async (req) => {
+        const body = (await req.json().catch(() => null)) as {
+          repoRoot?: string;
+        } | null;
+        if (typeof body?.repoRoot !== "string" || !body.repoRoot.trim()) {
+          return errorResponse("body must be { repoRoot: string }");
+        }
+        const resolved = path.resolve(body.repoRoot.trim());
+        if (!looksLikeAiJobSearchCheckout(resolved)) {
+          return errorResponse(
+            `"${resolved}" doesn't look like an ai-job-search checkout (expected to find CLAUDE.md and .claude/ there).`,
+          );
+        }
+        await writeDashboardConfig({ repoRoot: resolved });
+        return json({ saved: true, repoRoot: resolved });
+      },
+    },
 
     "/api/jobs": {
       GET: async () => json(await listScrapedJobs()),
@@ -599,4 +639,10 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
 console.log(
   `AI Job Search dashboard server listening on http://${HOST}:${server.port}`,
 );
-console.log(`Repo root: ${paths.repoRoot}`);
+if (isConfigured()) {
+  console.log(`Repo root: ${paths.repoRoot}`);
+} else {
+  console.log(
+    "Not configured yet -- open the dashboard to finish setup, or set AI_JOB_SEARCH_ROOT and restart.",
+  );
+}

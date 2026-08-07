@@ -9,6 +9,7 @@ import type { RunPermissionMode } from "./runTypes";
 import type { SalaryCompanyEntry, SalaryMetadata } from "./types";
 
 export const queryKeys = {
+  setup: ["setup"] as const,
   jobs: ["jobs"] as const,
   tracker: ["tracker"] as const,
   applications: ["applications"] as const,
@@ -29,6 +30,19 @@ export const queryKeys = {
   run: (id: string) => ["runs", id] as const,
   runLog: (id: string) => ["runs", id, "log"] as const,
 };
+
+export function useSetupStatus() {
+  return useQuery({ queryKey: queryKeys.setup, queryFn: api.setup.get });
+}
+
+export function useSaveSetup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (repoRoot: string) => api.setup.save(repoRoot),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.setup }),
+  });
+}
 
 export function useJobs() {
   return useQuery({ queryKey: queryKeys.jobs, queryFn: api.jobs.list });

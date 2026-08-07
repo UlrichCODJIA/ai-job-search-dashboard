@@ -27,6 +27,11 @@ bun run test
 
 Both also run in CI on every PR.
 
+Salary search (`/api/salary/search`) shells out to `python`/`python3` and
+`salary_lookup.py` in your `AI_JOB_SEARCH_ROOT` checkout - without a Python
+interpreter on `PATH`, only the JSON-file-backed parts of the Salary page
+work.
+
 ## Scope
 
 This repo is a reader/launcher for `ai-job-search`'s own commands and data
@@ -45,6 +50,13 @@ and this dashboard should just launch/display it.
 - Add a test alongside any behavior change in `server/src/lib/`.
 - Comments explain *why*, not *what* - skip comments that just restate the
   code.
+- A couple of deliberate, already-reaffirmed design choices worth knowing
+  before "fixing" them: `--color-signal-ink` (`web/src/styles/index.css`) is
+  white text on the teal brand color by informed override, not a WCAG
+  oversight (white-on-`#0891b2` is below AA for small bold text; that tradeoff
+  was made on purpose for a brand/aesthetic preference). `STATUS_COLORS` /
+  `FIT_COLORS` in `web/src/components/Pill.tsx` are a separate, fixed semantic
+  palette that intentionally does not track the brand primary color.
 
 ## Reporting bugs vs. requesting features
 

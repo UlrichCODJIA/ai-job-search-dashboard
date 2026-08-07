@@ -9,6 +9,7 @@ server/dist/
 # real run transcripts, never meant to be committed
 server/.runs/
 server/.uploads/
+server/.dashboard-config.json
 
 # Editors / OS
 .DS_Store

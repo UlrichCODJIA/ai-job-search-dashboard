@@ -42,7 +42,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  health: () => request<{ ok: boolean; repoRoot: string }>("/api/health"),
+  setup: {
+    get: () =>
+      request<{ configured: boolean; repoRoot: string | null }>("/api/setup"),
+    save: (repoRoot: string) =>
+      request<{ saved: boolean; repoRoot: string }>("/api/setup", {
+        method: "POST",
+        body: JSON.stringify({ repoRoot }),
+      }),
+  },
 
   jobs: {
     list: () => request<ScrapedJob[]>("/api/jobs"),
