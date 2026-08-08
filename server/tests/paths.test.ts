@@ -4,12 +4,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 const ORIGINAL_AI_JOB_SEARCH_ROOT = process.env.AI_JOB_SEARCH_ROOT;
+const realDashboardConfig = await import("../src/lib/dashboardConfig.js");
 
 let mockSavedConfig: { repoRoot?: string } | null = null;
 
 mock.module("../src/lib/dashboardConfig.js", () => ({
+  ...realDashboardConfig,
   readDashboardConfig: () => mockSavedConfig,
-  writeDashboardConfig: async () => {},
 }));
 
 function importFreshPaths(): Promise<typeof import("../src/lib/paths.js")> {

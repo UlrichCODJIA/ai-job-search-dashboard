@@ -104,12 +104,13 @@ describe("searchSalary", () => {
     await expect(promise).rejects.toThrow("spawn python ENOENT");
   });
 
-  test("invokes the script with the query, --json, and cwd: REPO_ROOT", async () => {
+  test("invokes the script with the query, --json, and cwd: paths.repoRoot", async () => {
     writeFileSync(mockPaths.salaryData, "{}");
+    mockPaths.repoRoot = "/sentinel-repo-root-for-cwd-test";
     const promise = searchSalary("acme corp");
     lastChild!.emit("close", 1);
     await promise;
     expect(lastSpawnCall?.args).toEqual([mockPaths.salaryLookupScript, "acme corp", "--json"]);
-    expect(lastSpawnCall?.options).toMatchObject({ cwd: realRepoRoot });
+    expect(lastSpawnCall?.options).toMatchObject({ cwd: "/sentinel-repo-root-for-cwd-test" });
   });
 });

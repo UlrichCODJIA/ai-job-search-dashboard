@@ -1,7 +1,8 @@
+import clsx from "clsx";
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { useJobs, useProfile, useTracker } from "../api/queries";
-import type { StatusBucket } from "../api/types";
+import { Link, useNavigate } from "react-router-dom";
+import { useJobs, useLaunchRun, useProfile, useTracker } from "../api/queries";
+import type { ScrapedJob, StatusBucket, TrackerRow } from "../api/types";
 import { ActivityHeatmap } from "../components/charts/ActivityHeatmap";
 import { AreaChart } from "../components/charts/AreaChart";
 import { HorizontalBarChart } from "../components/charts/BarChart";
@@ -26,6 +27,7 @@ import {
   staleDraftRows,
   staleInterviewRows,
 } from "../lib/pipeline";
+import { outlineButtonClass } from "../lib/ui";
 
 const BUCKETS: StatusBucket[] = [
   "Drafted",
@@ -35,6 +37,89 @@ const BUCKETS: StatusBucket[] = [
   "Hired",
   "Rejected/Closed",
 ];
+
+function FirstRunChecklist({
+  jobs,
+  tracker,
+}: {
+  jobs: ScrapedJob[];
+  tracker: TrackerRow[];
+}) {
+  const launchRun = useLaunchRun();
+  const navigate = useNavigate();
+
+  const steps = [
+    {
+      key: "scrape",
+      label: "Scrape for postings",
+      description: "Search job portals for openings that match your search queries.",
+      command: "/scrape",
+      done: jobs.length > 0,
+    },
+    {
+      key: "rank",
+      label: "Rank what you found",
+      description: "Triage postings by fit before spending time on any of them.",
+      command: "/rank",
+      done: jobs.some((j) => j.status !== "new"),
+    },
+    {
+      key: "apply",
+      label: "Draft your first application",
+      description: "Tailor a CV and cover letter for a posting you like.",
+      command: "/apply",
+      done: tracker.length > 0,
+    },
+  ];
+
+  return (
+    <section className="rounded-3xl border border-signal/20 bg-signal/[0.04] p-4 shadow-sm">
+      <InlineSectionHeading>Let's get your search moving</InlineSectionHeading>
+      <p className="mb-3 text-xs text-muted">
+        Already run <code>/setup</code>? Here's what's next in the framework's core loop.
+      </p>
+      <ul className="flex flex-col gap-2">
+        {steps.map((step) => (
+          <li
+            key={step.key}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-border/10 bg-surface px-3 py-2.5"
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                className={clsx(
+                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                  step.done
+                    ? "bg-signal text-signal-ink"
+                    : "border border-border/20 text-muted",
+                )}
+              >
+                {step.done ? "✓" : ""}
+              </span>
+              <div>
+                <p className="text-sm font-medium text-ink">{step.label}</p>
+                <p className="text-xs text-muted">{step.description}</p>
+              </div>
+            </div>
+            {!step.done && (
+              <button
+                onClick={() =>
+                  launchRun.mutate(
+                    { command: step.command },
+                    { onSuccess: ({ runId }) => navigate(`/runs/${runId}`) },
+                  )
+                }
+                disabled={launchRun.isPending}
+                className={`shrink-0 ${outlineButtonClass}`}
+              >
+                Launch
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function greeting(name?: string | null): string {
   const hour = new Date().getHours();
@@ -133,6 +218,8 @@ export default function Overview() {
               className="h-40 w-full select-none object-contain object-bottom sm:h-52 lg:absolute lg:inset-0 lg:h-full lg:object-right-bottom"
             />
           </section>
+
+          {tracker.length === 0 && <FirstRunChecklist jobs={jobs} tracker={tracker} />}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {BUCKETS.map((bucket) => (

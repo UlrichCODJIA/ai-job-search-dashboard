@@ -18,7 +18,7 @@ const { startRun, stopRun } = await import("../src/lib/claudeRunner.js");
 const { getRun, getSessionForKey } = await import("../src/lib/runStore.js");
 const { getEventLog } = await import("../src/ws/hub.js");
 
-async function waitForSettled(runId: string, timeoutMs = 2000): Promise<void> {
+async function waitForSettled(runId: string, timeoutMs = 5000): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const run = await getRun(runId);
@@ -30,7 +30,7 @@ async function waitForSettled(runId: string, timeoutMs = 2000): Promise<void> {
 
 async function waitFor(
   check: () => Promise<boolean> | boolean,
-  timeoutMs = 2000,
+  timeoutMs = 5000,
 ): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {

@@ -1,7 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { getCvTemplate, updateCvTemplate } from "./lib/cvTemplate.js";
-import { writeDashboardConfig } from "./lib/dashboardConfig.js";
 import {
   deleteDocument,
   deleteUpload,
@@ -12,12 +11,8 @@ import {
   saveUpload,
 } from "./lib/documents.js";
 import { errorResponse, json } from "./lib/http.js";
-import {
-  isConfigured,
-  looksLikeAiJobSearchCheckout,
-  paths,
-  RootNotConfiguredError,
-} from "./lib/paths.js";
+import { isConfigured, paths } from "./lib/paths.js";
+import { handleServerError } from "./lib/serverError.js";
 import { listPortalSkills, setPortalEnabled } from "./lib/portals.js";
 import {
   getProfileData,
@@ -51,6 +46,7 @@ import {
 import { resolveTrackerFilePath } from "./lib/trackerFiles.js";
 import { listUpskillReports } from "./lib/upskill.js";
 import { runsRoutes } from "./routes/runs.js";
+import { setupRoutes } from "./routes/setup.js";
 import { reconcileOrphanedRuns } from "./lib/runStore.js";
 import {
   resolveApproval,
@@ -94,13 +90,7 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
   port: PORT,
   hostname: HOST,
   development: false,
-  error(err) {
-    if (err instanceof RootNotConfiguredError) {
-      return errorResponse(err.message, 503);
-    }
-    console.error("Unhandled route error:", err);
-    return errorResponse("internal server error", 500);
-  },
+  error: handleServerError,
   routes: {
     "/api/health": () =>
       json({
@@ -109,29 +99,7 @@ const server: Bun.Server<RunSocketData> = Bun.serve({
         repoRoot: isConfigured() ? paths.repoRoot : null,
       }),
 
-    "/api/setup": {
-      GET: async () =>
-        json({
-          configured: isConfigured(),
-          repoRoot: isConfigured() ? paths.repoRoot : null,
-        }),
-      POST: async (req) => {
-        const body = (await req.json().catch(() => null)) as {
-          repoRoot?: string;
-        } | null;
-        if (typeof body?.repoRoot !== "string" || !body.repoRoot.trim()) {
-          return errorResponse("body must be { repoRoot: string }");
-        }
-        const resolved = path.resolve(body.repoRoot.trim());
-        if (!looksLikeAiJobSearchCheckout(resolved)) {
-          return errorResponse(
-            `"${resolved}" doesn't look like an ai-job-search checkout (expected to find CLAUDE.md and .claude/ there).`,
-          );
-        }
-        await writeDashboardConfig({ repoRoot: resolved });
-        return json({ saved: true, repoRoot: resolved });
-      },
-    },
+    ...setupRoutes,
 
     "/api/jobs": {
       GET: async () => json(await listScrapedJobs()),

@@ -8,6 +8,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useTheme } from "../../hooks/useTheme";
 import { Avatar } from "../Avatar";
 import { MenuIcon, SearchIcon } from "../icons";
+import { GuideDrawer } from "./GuideDrawer";
 import { LogoMark } from "./LogoMark";
 import { CORE_NAV_ITEMS } from "./navItems";
 
@@ -71,6 +72,7 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
   const isMobile = !useMediaQuery("(min-width: 640px)");
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -245,6 +247,14 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
           <span className="sm:hidden">Runs</span>
         </Link>
         <button
+          onClick={() => setGuideOpen(true)}
+          className="rounded-full border border-border/15 p-1.5 text-sm text-muted transition-colors hover:border-signal/30 hover:text-signal"
+          aria-label="Open guide"
+          title="What does each page do?"
+        >
+          ?
+        </button>
+        <button
           onClick={toggle}
           className="rounded-full border border-border/15 p-1.5 text-sm text-muted transition-colors hover:border-signal/30 hover:text-signal"
           aria-label="Toggle color theme"
@@ -253,6 +263,8 @@ export function TopNav({ onMenuClick }: { onMenuClick: () => void }) {
           {theme === "dark" ? "☀️" : "🌙"}
         </button>
       </div>
+
+      <GuideDrawer open={guideOpen} onOpenChange={setGuideOpen} />
 
       <Dialog.Root open={searchOpen && isMobile} onOpenChange={setSearchOpen}>
         <Dialog.Portal>
