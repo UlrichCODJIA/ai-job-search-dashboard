@@ -1,7 +1,16 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { setStreamFactory } from "./helpers/mockClaudeSdk.js";
 
-mock.module("@anthropic-ai/claude-agent-sdk", () => ({
-  query: () => ({
+const { runsRoutes } = await import("../src/routes/runs.js");
+const { createRun, getRun, deleteThread } = await import("../src/lib/runStore.js");
+const { cancelPendingApprovalsForRun, deleteRunEvents, requestApproval } = await import("../src/ws/hub.js");
+
+function testRunId(suffix: string): string {
+  return `00000000-0000-4000-9100-${suffix.padStart(12, "0")}`;
+}
+
+beforeEach(() => {
+  setStreamFactory(() => ({
     async *[Symbol.asyncIterator]() {
       yield {
         type: "system",
@@ -19,21 +28,14 @@ mock.module("@anthropic-ai/claude-agent-sdk", () => ({
         duration_ms: 1,
       };
     },
-  }),
-}));
-
-const { runsRoutes } = await import("../src/routes/runs.js");
-const { createRun, getRun, deleteThread } = await import("../src/lib/runStore.js");
-const { cancelPendingApprovalsForRun, requestApproval } = await import("../src/ws/hub.js");
-
-function testRunId(suffix: string): string {
-  return `00000000-0000-4000-9100-${suffix.padStart(12, "0")}`;
-}
+  }));
+});
 
 const seededThreadRoots: string[] = [];
 afterEach(async () => {
   for (const rootId of seededThreadRoots.splice(0)) {
     await deleteThread(rootId);
+    await deleteRunEvents(rootId);
   }
 });
 
@@ -268,6 +270,7 @@ describe("POST /api/runs/:id/reply", () => {
     const body = (await jsonOf(res)) as { runId: string };
     expect(body.runId).toBeTruthy();
     expect(body.runId).not.toBe(runId);
+    seededThreadRoots.push(body.runId);
     const replyRun = await getRun(body.runId);
     expect(replyRun?.threadRootId).toBe(runId);
   });

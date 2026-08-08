@@ -1,16 +1,10 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { mockPaths } from "./helpers/mockPaths.js";
 
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
 let testDir: string;
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
 
 const { updateTrackerRow, TrackerRowConflictError, bucketForStatus } = await import("../src/lib/tracker.js");
 

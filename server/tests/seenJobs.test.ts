@@ -1,15 +1,8 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-const real = await import("../src/lib/paths.js");
-const mockPaths = { ...real.paths };
-
-mock.module("../src/lib/paths.js", () => ({
-  ...real,
-  paths: mockPaths,
-}));
+import { mockPaths } from "./helpers/mockPaths.js";
 
 const { listScrapedJobs, updateScrapedJob } = await import("../src/lib/seenJobs.js");
 
@@ -30,7 +23,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  mockPaths.seenJobs = real.paths.seenJobs;
   rmSync(testDir, { recursive: true, force: true });
 });
 

@@ -1,17 +1,10 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { setMockSavedConfig } from "./helpers/mockDashboardConfig.js";
 
 const ORIGINAL_AI_JOB_SEARCH_ROOT = process.env.AI_JOB_SEARCH_ROOT;
-const realDashboardConfig = await import("../src/lib/dashboardConfig.js");
-
-let mockSavedConfig: { repoRoot?: string } | null = null;
-
-mock.module("../src/lib/dashboardConfig.js", () => ({
-  ...realDashboardConfig,
-  readDashboardConfig: () => mockSavedConfig,
-}));
 
 function importFreshPaths(): Promise<typeof import("../src/lib/paths.js")> {
   return import(`../src/lib/paths.js?fresh=${Math.random()}`);
@@ -26,7 +19,6 @@ let testDir: string | undefined;
 
 afterEach(() => {
   process.env.AI_JOB_SEARCH_ROOT = ORIGINAL_AI_JOB_SEARCH_ROOT;
-  mockSavedConfig = null;
   if (testDir) rmSync(testDir, { recursive: true, force: true });
   testDir = undefined;
 });
@@ -34,7 +26,7 @@ afterEach(() => {
 describe("findRepoRoot / paths module-scope validation", () => {
   test("boots unconfigured (no throw) when AI_JOB_SEARCH_ROOT is unset and no config is saved", async () => {
     delete process.env.AI_JOB_SEARCH_ROOT;
-    mockSavedConfig = null;
+    setMockSavedConfig(null);
     const { isConfigured, paths } = await importFreshPaths();
     expect(isConfigured()).toBe(false);
     expect(() => paths.repoRoot).toThrow(/isn't configured yet/);
@@ -70,7 +62,7 @@ describe("findRepoRoot / paths module-scope validation", () => {
     delete process.env.AI_JOB_SEARCH_ROOT;
     testDir = mkdtempSync(path.join(tmpdir(), "paths-test-config-fallback-"));
     makeValidCheckout(testDir);
-    mockSavedConfig = { repoRoot: testDir };
+    setMockSavedConfig({ repoRoot: testDir });
 
     const { isConfigured, paths } = await importFreshPaths();
     expect(isConfigured()).toBe(true);
@@ -80,7 +72,7 @@ describe("findRepoRoot / paths module-scope validation", () => {
   test("ignores a saved config pointing at an invalid checkout -- stays unconfigured, doesn't throw", async () => {
     delete process.env.AI_JOB_SEARCH_ROOT;
     testDir = mkdtempSync(path.join(tmpdir(), "paths-test-config-invalid-"));
-    mockSavedConfig = { repoRoot: testDir };
+    setMockSavedConfig({ repoRoot: testDir });
 
     const { isConfigured, paths } = await importFreshPaths();
     expect(isConfigured()).toBe(false);
@@ -93,7 +85,7 @@ describe("findRepoRoot / paths module-scope validation", () => {
     makeValidCheckout(envDir);
     makeValidCheckout(configDir);
     process.env.AI_JOB_SEARCH_ROOT = envDir;
-    mockSavedConfig = { repoRoot: configDir };
+    setMockSavedConfig({ repoRoot: configDir });
 
     try {
       const { paths } = await importFreshPaths();

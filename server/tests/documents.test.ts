@@ -1,15 +1,8 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-const real = await import("../src/lib/paths.js");
-const mockPaths = { ...real.paths };
-
-mock.module("../src/lib/paths.js", () => ({
-  ...real,
-  paths: mockPaths,
-}));
+import { mockPaths } from "./helpers/mockPaths.js";
 
 const {
   deleteDocument,
@@ -30,8 +23,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  mockPaths.repoRoot = real.paths.repoRoot;
-  mockPaths.uploadsDir = real.paths.uploadsDir;
   rmSync(testDir, { recursive: true, force: true });
 });
 

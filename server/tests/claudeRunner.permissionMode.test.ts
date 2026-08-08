@@ -1,9 +1,10 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { setStreamFactory } from "./helpers/mockClaudeSdk.js";
 
 let lastOptions: Record<string, unknown> | undefined;
 
-mock.module("@anthropic-ai/claude-agent-sdk", () => ({
-  query: (args: { options: Record<string, unknown> }) => {
+beforeEach(() => {
+  setStreamFactory((args) => {
     lastOptions = args.options;
     return {
       async *[Symbol.asyncIterator]() {
@@ -24,11 +25,25 @@ mock.module("@anthropic-ai/claude-agent-sdk", () => ({
         };
       },
     };
-  },
-}));
+  });
+});
 
-const { startRun } = await import("../src/lib/claudeRunner.js");
-const { getRun } = await import("../src/lib/runStore.js");
+const { startRun: realStartRun } = await import("../src/lib/claudeRunner.js");
+const { getRun, deleteThread } = await import("../src/lib/runStore.js");
+const { deleteRunEvents } = await import("../src/ws/hub.js");
+
+const createdRunIds: string[] = [];
+async function startRun(...args: Parameters<typeof realStartRun>): ReturnType<typeof realStartRun> {
+  const runId = await realStartRun(...args);
+  createdRunIds.push(runId);
+  return runId;
+}
+afterEach(async () => {
+  for (const runId of createdRunIds.splice(0)) {
+    await deleteThread(runId);
+    await deleteRunEvents(runId);
+  }
+});
 
 async function waitForSettled(runId: string, timeoutMs = 2000): Promise<void> {
   const start = Date.now();

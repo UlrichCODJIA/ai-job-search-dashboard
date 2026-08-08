@@ -1,15 +1,8 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
+import { mockPaths } from "./helpers/mockPaths.js";
 
 const { acquireInstanceLock, AnotherInstanceRunningError } = await import(
   "../src/lib/instanceLock.js"

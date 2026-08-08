@@ -1,6 +1,24 @@
 import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+const TRANSIENT_FS_RETRY_DELAYS_MS = [20, 40, 80, 160, 320];
+
+function isTransientFsError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException).code;
+  return code === "EPERM" || code === "EBUSY";
+}
+
+async function retryOnTransientFsError<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt >= TRANSIENT_FS_RETRY_DELAYS_MS.length || !isTransientFsError(err)) throw err;
+      await new Promise((resolve) => setTimeout(resolve, TRANSIENT_FS_RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
 export async function atomicWriteFile(
   filePath: string,
   content: string,
@@ -8,7 +26,12 @@ export async function atomicWriteFile(
   await mkdir(path.dirname(filePath), { recursive: true });
   const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
   await writeFile(tmpPath, content, "utf-8");
-  await rename(tmpPath, filePath);
+  try {
+    await retryOnTransientFsError(() => rename(tmpPath, filePath));
+  } catch (err) {
+    await unlink(tmpPath).catch(() => undefined);
+    throw err;
+  }
 }
 
 export function matchEol(content: string, sourceText: string): string {
@@ -45,10 +68,12 @@ export async function acquireFileLock(
 
   for (;;) {
     try {
-      await writeFile(lockPath, String(process.pid), {
-        encoding: "utf-8",
-        flag: "wx",
-      });
+      await retryOnTransientFsError(() =>
+        writeFile(lockPath, String(process.pid), {
+          encoding: "utf-8",
+          flag: "wx",
+        }),
+      );
       return () => unlink(lockPath).catch(() => undefined);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;

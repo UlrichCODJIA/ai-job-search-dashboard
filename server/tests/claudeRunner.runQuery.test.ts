@@ -1,22 +1,22 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { getQueryCallCount, setStreamFactory } from "./helpers/mockClaudeSdk.js";
 
-type StreamFactory = (abortController: AbortController) => AsyncIterable<Record<string, unknown>>;
+const { startRun: realStartRun, stopRun } = await import("../src/lib/claudeRunner.js");
+const { getRun, getSessionForKey, deleteThread } = await import("../src/lib/runStore.js");
+const { getEventLog, deleteRunEvents } = await import("../src/ws/hub.js");
 
-let currentStreamFactory: StreamFactory | null = null;
-let queryCallCount = 0;
-
-mock.module("@anthropic-ai/claude-agent-sdk", () => ({
-  query: (args: { options: { abortController: AbortController } }) => {
-    queryCallCount++;
-    const factory = currentStreamFactory;
-    if (!factory) throw new Error("test forgot to set currentStreamFactory");
-    return factory(args.options.abortController);
-  },
-}));
-
-const { startRun, stopRun } = await import("../src/lib/claudeRunner.js");
-const { getRun, getSessionForKey } = await import("../src/lib/runStore.js");
-const { getEventLog } = await import("../src/ws/hub.js");
+const createdRunIds: string[] = [];
+async function startRun(...args: Parameters<typeof realStartRun>): ReturnType<typeof realStartRun> {
+  const runId = await realStartRun(...args);
+  createdRunIds.push(runId);
+  return runId;
+}
+afterEach(async () => {
+  for (const runId of createdRunIds.splice(0)) {
+    await deleteThread(runId);
+    await deleteRunEvents(runId);
+  }
+});
 
 async function waitForSettled(runId: string, timeoutMs = 5000): Promise<void> {
   const start = Date.now();
@@ -63,7 +63,7 @@ function resultMessage(isError: boolean) {
 
 describe("runQuery event translation (happy path)", () => {
   test("assistant text block emits assistant_text with agentID from subagent_type", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-text-1");
         yield {
@@ -73,7 +73,7 @@ describe("runQuery event translation (happy path)", () => {
         };
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -87,7 +87,7 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("assistant tool_use block emits tool_use with id/name/input/agentID", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-tooluse-1");
         yield {
@@ -101,7 +101,7 @@ describe("runQuery event translation (happy path)", () => {
         };
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -117,7 +117,7 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("tool_result with non-string content is stringified, isError reflects is_error", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-toolresult-1");
         yield {
@@ -135,7 +135,7 @@ describe("runQuery event translation (happy path)", () => {
         };
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -150,7 +150,7 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("a tool_result matching the permission-channel-broken pattern emits exactly one such event even if it recurs", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-channelbroken-1");
         for (let i = 0; i < 2; i++) {
@@ -170,7 +170,7 @@ describe("runQuery event translation (happy path)", () => {
         }
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -181,13 +181,13 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("an unrecognized SDK message type falls through to the sdk_event catch-all", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-sdkevent-1");
         yield { type: "stream_event", subtype: "something_new", extra: 42 };
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -201,12 +201,12 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("a result message with is_error: false completes the run and emits run_result status success", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-success-1");
         yield resultMessage(false);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -226,12 +226,12 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("a result message with is_error: true fails the run and emits run_result status error", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-failure-1");
         yield resultMessage(true);
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -250,14 +250,14 @@ describe("runQuery event translation (happy path)", () => {
   });
 
   test("a successful run with a resumeKey persists the session id for that key", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-resumekey-1");
         yield resultMessage(false);
       },
-    });
+    }));
 
-    const resumeKey = `resume-key-${Date.now()}`;
+    const resumeKey = "test-resumekey-runquery";
     const runId = await startRun({ command: "/apply", resumeKey });
     await waitForSettled(runId);
     await waitFor(async () => (await getSessionForKey(resumeKey)) !== undefined);
@@ -268,12 +268,12 @@ describe("runQuery event translation (happy path)", () => {
 
 describe("runQuery error and abort handling", () => {
   test("a thrown error from the stream (not an abort) settles the run to status error", async () => {
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-thrown-1");
         throw new Error("boom from the sdk");
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
@@ -287,7 +287,7 @@ describe("runQuery error and abort handling", () => {
   });
 
   test("stopRun on an in-flight run aborts it, returns true, and settles it to status stopped", async () => {
-    currentStreamFactory = (abortController) => ({
+    setStreamFactory(({ abortController }) => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-stop-1");
         await new Promise((_resolve, reject) => {
@@ -298,11 +298,9 @@ describe("runQuery error and abort handling", () => {
           );
         });
       },
-    });
+    }));
 
     const runId = await startRun({ command: "/apply", args: "continue" });
-    // Wait until the init message has been processed (sessionId persisted) so the
-    // generator has definitely reached its post-yield await and registered the abort listener.
     await waitFor(async () => (await getRun(runId))?.sessionId === "session-stop-1");
     await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -319,12 +317,12 @@ describe("runQuery error and abort handling", () => {
   test("stopRun on an unknown or already-finished run returns false", async () => {
     expect(stopRun("no-such-run-id")).toBe(false);
 
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-finished-1");
         yield resultMessage(false);
       },
-    });
+    }));
     const runId = await startRun({ command: "/scrape" });
     await waitForSettled(runId);
 
@@ -333,7 +331,7 @@ describe("runQuery error and abort handling", () => {
 
   test("two runs resuming the same session id concurrently: the second errors immediately without calling query()", async () => {
     let releaseFirstRun: (() => void) | undefined;
-    currentStreamFactory = () => ({
+    setStreamFactory(() => ({
       async *[Symbol.asyncIterator]() {
         yield initMessage("session-concurrent-1");
         await new Promise<void>((resolve) => {
@@ -341,10 +339,10 @@ describe("runQuery error and abort handling", () => {
         });
         yield resultMessage(false);
       },
-    });
+    }));
 
     const sharedSessionId = `concurrent-session-${Date.now()}`;
-    const callsBefore = queryCallCount;
+    const callsBefore = getQueryCallCount();
 
     const run1Id = await startRun({
       command: "/apply",
@@ -370,7 +368,7 @@ describe("runQuery error and abort handling", () => {
         "This session is already being continued by another run. Wait for it to finish first.",
     });
 
-    expect(queryCallCount).toBe(callsBefore + 1);
+    expect(getQueryCallCount()).toBe(callsBefore + 1);
 
     releaseFirstRun?.();
     await waitForSettled(run1Id);

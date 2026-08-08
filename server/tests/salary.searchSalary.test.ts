@@ -3,9 +3,8 @@ import { EventEmitter } from "node:events";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { mockPaths } from "./helpers/mockPaths.js";
 
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
 let testDir: string;
 
 interface FakeChild extends EventEmitter {
@@ -23,12 +22,6 @@ function createFakeChild(): FakeChild {
 let lastChild: FakeChild | null = null;
 let lastSpawnCall: { command: string; args: string[]; options: Record<string, unknown> } | null = null;
 let spawnCallCount = 0;
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
-
 mock.module("node:child_process", () => ({
   spawn: (command: string, args: string[], options: Record<string, unknown>) => {
     spawnCallCount++;

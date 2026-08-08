@@ -1,16 +1,10 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { mockPaths } from "./helpers/mockPaths.js";
 
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
 let testDir: string;
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
 
 const { updateProfileSection, ProfileSectionConflictError, getProfileData } = await import(
   "../src/lib/profile.js"
@@ -114,8 +108,6 @@ describe("getProfileData -- placeholder scan coverage", () => {
 
   afterEach(() => {
     rmSync(testDir, { recursive: true, force: true });
-    mockPaths.cvMainExample = realPaths.cvMainExample;
-    mockPaths.searchQueries = realPaths.searchQueries;
   });
 
   test("a placeholder left in cv/main_example.tex is reported, not silently missed", async () => {

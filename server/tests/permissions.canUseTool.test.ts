@@ -1,15 +1,8 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
+import { mockPaths, realPaths } from "./helpers/mockPaths.js";
 
 const { createPermissionHandler } = await import("../src/lib/permissions.js");
 const {
@@ -47,7 +40,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  mockPaths.repoRoot = realPaths.repoRoot;
   rmSync(testDir, { recursive: true, force: true });
 });
 

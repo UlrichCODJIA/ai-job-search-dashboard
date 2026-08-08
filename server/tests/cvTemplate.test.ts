@@ -1,16 +1,10 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { mockPaths } from "./helpers/mockPaths.js";
 
-const { paths: realPaths, REPO_ROOT: realRepoRoot } = await import("../src/lib/paths.js");
-const mockPaths = { ...realPaths };
 let testDir: string;
-
-mock.module("../src/lib/paths.js", () => ({
-  REPO_ROOT: realRepoRoot,
-  paths: mockPaths,
-}));
 
 const { getCvTemplate, updateCvTemplate } = await import("../src/lib/cvTemplate.js");
 
@@ -23,7 +17,6 @@ describe("cvTemplate", () => {
 
   afterEach(() => {
     rmSync(testDir, { recursive: true, force: true });
-    mockPaths.cvMainExample = realPaths.cvMainExample;
   });
 
   test("getCvTemplate returns an empty string when the file doesn't exist yet", async () => {
